@@ -1,0 +1,38 @@
+[gd_scene load_steps=4 format=3 uid="uid://h1u2b3s4c5n6e7"]
+
+[ext_resource type="PackedScene" path="res://scenes/Guardian.tscn" id=1]
+[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id=2]
+
+[sub_resource type="RectangleShape2D" id=1]
+size = Vector2(960, 40)
+
+[node name="Hub" type="Node2D"]
+
+[node name="CameraBounds" type="Node2D" parent="."]
+
+[node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
+size = Vector2(960, 540)
+position = Vector2(-480, -360)
+
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+position = Vector2(-320, 200)
+
+[node name="Floor" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
+shape = SubResource("1")
+position = Vector2(0, 260)
+
+[node name="FloorVisual" type="ColorRect" parent="Floor"]
+color = Color(0.15, 0.15, 0.2, 1)
+size = Vector2(960, 40)
+position = Vector2(-480, 240)
+
+[node name="Guardian" parent="." instance=ExtResource("1")]
+position = Vector2(-300, 200)
+
+[node name="DescentDoor" parent="." instance=ExtResource("2")]
+position = Vector2(360, 200)
+target_scene = "BossRoom"
+spawn_marker = "PlayerSpawn"
+requires_guardian_intro = true

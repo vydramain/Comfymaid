@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://w1h2i3t4e5o6u7"]
+
+[ext_resource type="Script" path="res://scripts/whiteout_ui.gd" id=1]
+
+[node name="WhiteoutUI" type="ColorRect"]
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 1, 1, 0)
+script = ExtResource("1")

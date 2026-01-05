@@ -1,0 +1,27 @@
+[gd_scene load_steps=1 format=3 uid="uid://m1e2c3h4w5r6d7"]
+
+[ext_resource type="Script" path="res://scripts/mechanic_word.gd" id=1]
+
+[sub_resource type="RectangleShape2D" id=1]
+size = Vector2(120, 40)
+
+[node name="MechanicWord" type="Node2D"]
+script = ExtResource("1")
+
+[node name="FullLabel" type="Label" parent="."]
+text = "МЕХАНИКА"
+
+[node name="LeftLabel" type="Label" parent="."]
+text = "МЕХА"
+visible = false
+
+[node name="RightLabel" type="Label" parent="."]
+text = "НИКА"
+visible = false
+position = Vector2(36, 0)
+
+[node name="HurtArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtArea"]
+shape = SubResource("1")
+position = Vector2(40, -10)

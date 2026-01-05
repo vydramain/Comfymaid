@@ -1,0 +1,30 @@
+[gd_scene load_steps=6 format=3 uid="uid://m1a2n3s4c5n6e7"]
+
+[ext_resource type="Script" uid="uid://dlh7qihpe3v2m" path="res://scripts/scene_manager.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ui/DialogueUI.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PromptUI.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/ui/OverlayLineUI.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/ui/WhiteoutUI.tscn" id="5"]
+
+[node name="Main" type="Node"]
+
+[node name="LevelRoot" type="Node2D" parent="."]
+
+[node name="SceneManager" type="Node" parent="."]
+script = ExtResource("1")
+level_container_path = NodePath("../LevelRoot")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="DialogueUI" parent="UI" instance=ExtResource("2")]
+layout_mode = 3
+
+[node name="PromptUI" parent="UI" instance=ExtResource("3")]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="OverlayLineUI" parent="UI" instance=ExtResource("4")]
+layout_mode = 3
+
+[node name="WhiteoutUI" parent="UI" instance=ExtResource("5")]
+anchors_preset = 15

@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://d1e2b3u4g5h6d7"]
+
+[ext_resource type="Script" path="res://scripts/debug_hud.gd" id=1]
+
+[node name="DebugHUD" type="Control"]
+layout_mode = 3
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 212.0
+offset_bottom = 100.0
+script = ExtResource("1")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 200.0
+offset_bottom = 80.0
+
+[node name="SceneLabel" type="Label" parent="VBox"]
+unique_name_in_owner = true
+text = "Scene: --"
+
+[node name="VelocityLabel" type="Label" parent="VBox"]
+unique_name_in_owner = true
+text = "vel: --"
