@@ -1,9 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://h1u2b3s4c5n6e7"]
+[gd_scene load_steps=4 format=3 uid="uid://b2b4yyl7qwnu7"]
 
-[ext_resource type="PackedScene" path="res://scenes/Guardian.tscn" id=1]
-[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id=2]
+[ext_resource type="PackedScene" uid="uid://ctyxbgvitqjo3" path="res://scenes/Guardian.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="2"]
 
-[sub_resource type="RectangleShape2D" id=1]
+[sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(960, 40)
 
 [node name="Hub" type="Node2D"]
@@ -11,28 +11,31 @@ size = Vector2(960, 40)
 [node name="CameraBounds" type="Node2D" parent="."]
 
 [node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
-size = Vector2(960, 540)
-position = Vector2(-480, -360)
+offset_left = -480.0
+offset_top = -260.0
+offset_right = 480.0
+offset_bottom = 280.0
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
-position = Vector2(-320, 200)
+position = Vector2(0, 141)
 
 [node name="Floor" type="StaticBody2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
-shape = SubResource("1")
 position = Vector2(0, 260)
+shape = SubResource("1")
 
 [node name="FloorVisual" type="ColorRect" parent="Floor"]
+offset_left = -480.0
+offset_top = 240.0
+offset_right = 480.0
+offset_bottom = 280.0
 color = Color(0.15, 0.15, 0.2, 1)
-size = Vector2(960, 40)
-position = Vector2(-480, 240)
 
 [node name="Guardian" parent="." instance=ExtResource("1")]
-position = Vector2(-300, 200)
+position = Vector2(-461, 236)
 
 [node name="DescentDoor" parent="." instance=ExtResource("2")]
-position = Vector2(360, 200)
+position = Vector2(451, 199)
 target_scene = "BossRoom"
-spawn_marker = "PlayerSpawn"
 requires_guardian_intro = true

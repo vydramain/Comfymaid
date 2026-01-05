@@ -12,7 +12,7 @@ const PLAYER_JUMP_BUFFER_TIME := 0.12
 const PLAYER_MAX_FALL_SPEED := 900.0
 const PLAYER_ATTACK_COOLDOWN := 0.35
 const PLAYER_ATTACK_DURATION := 0.12
-const PLAYER_ATTACK_RADIUS := 28.0
+const PLAYER_ATTACK_RADIUS := PLAYER_HEIGHT
 const PLAYER_ATTACK_LOCK_TIME := 0.08
 const PLAYER_IFRAME_DURATION := 0.4
 const PLAYER_HIT_FLASH_TIME := 0.15
@@ -123,12 +123,13 @@ func _handle_attack(delta: float) -> void:
 
 func _spawn_attack_hitbox() -> void:
 	var hitbox := Area2D.new()
-	var shape := CollisionShape2D.new()
-	var circle := CircleShape2D.new()
-	circle.radius = PLAYER_ATTACK_RADIUS
-	shape.shape = circle
+	var shape := CollisionPolygon2D.new()
+	var polygon := _make_semicircle(PLAYER_ATTACK_RADIUS)
+	shape.polygon = polygon
 	hitbox.add_child(shape)
-	hitbox.position = Vector2(PLAYER_ATTACK_RADIUS * _facing, -4)
+	# hitbox.position = Vector2(PLAYER_ATTACK_RADIUS * _facing, -4)
+	hitbox.position.x = (_facing * (PLAYER_WIDTH * 0.5 + PLAYER_ATTACK_RADIUS * 0.1))
+	hitbox.scale.x = _facing
 	hitbox.monitoring = true
 	hitbox.collision_layer = 0
 	hitbox.collision_mask = 1
@@ -136,6 +137,16 @@ func _spawn_attack_hitbox() -> void:
 	hitbox.body_entered.connect(_on_attack_hit)
 	hitbox.area_entered.connect(_on_attack_hit)
 	get_tree().create_timer(PLAYER_ATTACK_DURATION).timeout.connect(hitbox.queue_free)
+
+func _make_semicircle(radius: float) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	points.append(Vector2.ZERO)
+	var segments := 10
+	for i in range(segments + 1):
+		var t: float = float(i) / float(segments)
+		var angle: float = lerp(-PI * 0.5, PI * 0.5, t)
+		points.append(Vector2(cos(angle) * radius, sin(angle) * radius))
+	return points
 
 func _on_attack_hit(target: Node) -> void:
 	if target == self:
