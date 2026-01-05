@@ -4,6 +4,7 @@ var player: CharacterBody2D
 
 @onready var scene_label: Label = %SceneLabel
 @onready var velocity_label: Label = %VelocityLabel
+@onready var input_label: Label = %InputLabel
 
 func _ready() -> void:
     set_process(true)
@@ -21,6 +22,10 @@ func _process(_delta: float) -> void:
         velocity_label.text = "vel: %.1f, %.1f | grounded: %s" % [player.velocity.x, player.velocity.y, grounded]
     else:
         velocity_label.text = "vel: --"
+    if GameDirector.instance:
+        input_label.text = "Input: %s" % GameDirector.instance.get_input_label()
+    else:
+        input_label.text = "Input: --"
 
 func _on_level_changed(scene_name: StringName) -> void:
     scene_label.text = "Scene: %s" % scene_name

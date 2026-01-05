@@ -3,7 +3,7 @@ extends Area2D
 const GUARDIAN_DIALOGUE_SUPPRESS_COLOR := Color(0.6, 0.6, 0.6)
 const GUARDIAN_IDLE_COLOR := Color(0.9, 0.9, 0.6)
 
-@export var prompt_text := "△ Talk"
+@export var prompt_text := "{INTERACT} Talk"
 @export var enabled := true
 @export var pre_boss_lines: Array[String] = [
     "Ты здесь?",
@@ -73,10 +73,7 @@ func _on_post_dialogue_finished() -> void:
         GameDirector.instance.request_reset()
 
 func _update_prompt() -> void:
-    if GameDirector.instance and GameDirector.instance.boss_defeated and GameDirector.instance.guardian_post_dialogue_done:
-        prompt_text = "△ Talk"
-    else:
-        prompt_text = "△ Talk"
+    prompt_text = "{INTERACT} Talk"
 
 func _update_visual_state() -> void:
     if body_rect == null or GameDirector.instance == null:

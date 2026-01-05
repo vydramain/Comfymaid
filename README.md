@@ -13,21 +13,22 @@ Godot 4.x 2D platformer vertical slice with Hollow Knight-like movement. The pro
 1. Open the project in Godot 4.x.
 2. Run the main scene: `res://scenes/Main.tscn` (already set in `project.godot`).
 
-## Controls (Design Target)
-Gamepad-first mapping (to be implemented in the next iteration):
+## Controls
+Gamepad-first mapping:
 - Move: left stick X
-- Jump: Cross (X)
-- Attack: Square
-- Interact/Confirm: Triangle
+- Jump: Cross (A)
+- Attack: Square (X)
+- Interact/Confirm: Triangle (Y)
 
-Keyboard equivalents (optional debug):
+Keyboard mapping:
 - Move: A / D or Left / Right
 - Jump: Space
 - Attack: J
-- Interact: E
+- Interact: K
 - Reset: R
 
-Gamepad mapping will be added in the next doc update. The design doc specifies the final gamepad-first mapping.
+Prompt text adapts to the last used input device for all actions:
+- Uses tokens like `{INTERACT}`, `{JUMP}`, `{ATTACK}`, `{MOVE}`, `{RESET}`
 
 ## Folder Structure
 - `scenes/`

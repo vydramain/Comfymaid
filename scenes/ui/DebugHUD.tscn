@@ -28,3 +28,7 @@ text = "Scene: --"
 [node name="VelocityLabel" type="Label" parent="VBox"]
 unique_name_in_owner = true
 text = "vel: --"
+
+[node name="InputLabel" type="Label" parent="VBox"]
+unique_name_in_owner = true
+text = "Input: --"

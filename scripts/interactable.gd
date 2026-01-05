@@ -1,6 +1,6 @@
 extends Area2D
 
-@export var prompt_text := "△ Interact"
+@export var prompt_text := "{INTERACT} Interact"
 @export var interaction_type := "generic"
 @export var target_scene: StringName = ""
 @export var spawn_marker: StringName = "PlayerSpawn"

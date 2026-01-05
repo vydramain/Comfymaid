@@ -2,7 +2,30 @@ extends Node
 
 enum GameState { HUB_FREE, HUB_DIALOGUE, TRANSITION, BOSSROOM_FREE, BOSS_FIGHT, RESET }
 
+enum InputType { KEYBOARD, GAMEPAD }
+
 static var instance: Node
+
+const INPUT_TYPE_INVALID := -1
+const INPUT_ACTION_LABELS := {
+	InputType.KEYBOARD: {
+		"MOVE": "A/D",
+		"JUMP": "Space",
+		"ATTACK": "J",
+		"INTERACT": "K",
+		"RESET": "R",
+	},
+	InputType.GAMEPAD: {
+		"MOVE": "LS",
+		"JUMP": "A",
+		"ATTACK": "X",
+		"INTERACT": "△",
+		"RESET": "R3",
+	},
+}
+const JOYPAD_DEADZONE := 0.2
+const JOYPAD_IGNORE_KEYWORDS := ["Keyboard", "Virtual", "Steam"]
+const JOYPAD_PREFERRED_KEYWORDS := ["DualSense", "Wireless Controller", "Sony", "PS5"]
 
 var mechanic_broken := false
 var boss_defeated := false
@@ -19,15 +42,29 @@ var overlay_ui: Node
 var whiteout_ui: Node
 var _scene_manager_connected := false
 var _dialogue_connected := false
+var _joypad_device_id := -1
+var _last_input_type := InputType.KEYBOARD
+var _input_handlers: Dictionary = {}
 
 func _ready() -> void:
 	instance = self
 	_configure_input_map()
+	_setup_joypad_bindings()
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
+	_setup_input_handlers()
 	_resolve_ui()
 	_connect_dialogue()
 	if SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
 		_scene_manager_connected = true
+
+func _input(event: InputEvent) -> void:
+	var handler: Callable = _input_handlers.get(event.get_class(), Callable()) as Callable
+	var next: int = INPUT_TYPE_INVALID
+	if handler.is_valid():
+		next = handler.call(event)
+	if next != INPUT_TYPE_INVALID:
+		_last_input_type = next as InputType
 
 func _exit_tree() -> void:
 	if instance == self:
@@ -208,6 +245,8 @@ func _add_key(action_name: StringName, keycode: Key) -> void:
 func _add_joy_button(action_name: StringName, button: JoyButton) -> void:
 	var event := InputEventJoypadButton.new()
 	event.button_index = button
+	if _joypad_device_id != -1:
+		event.device = _joypad_device_id
 	if not _has_event(action_name, event):
 		InputMap.action_add_event(action_name, event)
 
@@ -215,6 +254,8 @@ func _add_joy_motion(action_name: StringName, axis: JoyAxis, axis_value: float) 
 	var event := InputEventJoypadMotion.new()
 	event.axis = axis
 	event.axis_value = axis_value
+	if _joypad_device_id != -1:
+		event.device = _joypad_device_id
 	if not _has_event(action_name, event):
 		InputMap.action_add_event(action_name, event)
 
@@ -224,12 +265,93 @@ func _has_event(action_name: StringName, event: InputEvent) -> bool:
 			if existing.keycode == event.keycode:
 				return true
 		elif existing is InputEventJoypadButton and event is InputEventJoypadButton:
-			if existing.button_index == event.button_index:
+			if existing.button_index == event.button_index and existing.device == event.device:
 				return true
 		elif existing is InputEventJoypadMotion and event is InputEventJoypadMotion:
-			if existing.axis == event.axis and existing.axis_value == event.axis_value:
+			if existing.axis == event.axis and existing.axis_value == event.axis_value and existing.device == event.device:
 				return true
 	return false
+
+func _setup_joypad_bindings() -> void:
+	_joypad_device_id = _select_joypad_id()
+	_clear_joypad_events("move_left")
+	_clear_joypad_events("move_right")
+	_clear_joypad_events("jump")
+	_clear_joypad_events("attack")
+	_clear_joypad_events("interact")
+	if _joypad_device_id == -1:
+		return
+	_add_joy_button("jump", JoyButton.JOY_BUTTON_A)
+	_add_joy_button("attack", JoyButton.JOY_BUTTON_X)
+	_add_joy_button("interact", JoyButton.JOY_BUTTON_Y)
+	_add_joy_motion("move_left", JoyAxis.JOY_AXIS_LEFT_X, -1.0)
+	_add_joy_motion("move_right", JoyAxis.JOY_AXIS_LEFT_X, 1.0)
+
+func _clear_joypad_events(action_name: StringName) -> void:
+	for event in InputMap.action_get_events(action_name):
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			InputMap.action_erase_event(action_name, event)
+
+func _select_joypad_id() -> int:
+	var ids := Input.get_connected_joypads()
+	if ids.is_empty():
+		return -1
+	var fallback := int(ids[0])
+	var best := INPUT_TYPE_INVALID
+	for id in ids:
+		var device_name := Input.get_joy_name(id)
+		if _matches_keywords(device_name, JOYPAD_IGNORE_KEYWORDS):
+			continue
+		if _matches_keywords(device_name, JOYPAD_PREFERRED_KEYWORDS):
+			return int(id)
+		if best == INPUT_TYPE_INVALID:
+			best = int(id)
+	return best if best != INPUT_TYPE_INVALID else fallback
+
+func _matches_keywords(device_name: String, keywords: Array) -> bool:
+	var lower := device_name.to_lower()
+	for keyword in keywords:
+		if lower.find(str(keyword).to_lower()) != -1:
+			return true
+	return false
+
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	_setup_joypad_bindings()
+
+func _setup_input_handlers() -> void:
+	_input_handlers = {
+		"InputEventKey": Callable(self, "_input_from_key"),
+		"InputEventJoypadButton": Callable(self, "_input_from_joy_button"),
+		"InputEventJoypadMotion": Callable(self, "_input_from_joy_motion"),
+	}
+
+func _input_from_key(event: InputEventKey) -> int:
+	return InputType.KEYBOARD if event.pressed else INPUT_TYPE_INVALID as int
+
+func _input_from_joy_button(event: InputEventJoypadButton) -> int:
+	return InputType.GAMEPAD if event.pressed else INPUT_TYPE_INVALID as int
+
+func _input_from_joy_motion(event: InputEventJoypadMotion) -> int:
+	return InputType.GAMEPAD if abs(event.axis_value) > JOYPAD_DEADZONE else INPUT_TYPE_INVALID as int
+
+func get_interact_label() -> String:
+	return get_action_label("INTERACT")
+
+func get_action_label(action: String) -> String:
+	var map: Dictionary = INPUT_ACTION_LABELS.get(_last_input_type, INPUT_ACTION_LABELS[InputType.KEYBOARD]) as Dictionary
+	return map.get(action, "")
+
+func format_prompt_text(text: String) -> String:
+	var result := text
+	result = result.replace("{MOVE}", get_action_label("MOVE"))
+	result = result.replace("{JUMP}", get_action_label("JUMP"))
+	result = result.replace("{ATTACK}", get_action_label("ATTACK"))
+	result = result.replace("{INTERACT}", get_action_label("INTERACT"))
+	result = result.replace("{RESET}", get_action_label("RESET"))
+	return result
+
+func get_input_label() -> String:
+	return "Gamepad" if _last_input_type == InputType.GAMEPAD else "Keyboard"
 
 func _set_player_movement(enabled: bool) -> void:
 	var player := _get_player()

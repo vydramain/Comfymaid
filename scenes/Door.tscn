@@ -8,7 +8,7 @@ size = Vector2(60, 80)
 [node name="Door" type="Area2D"]
 script = ExtResource("1")
 interaction_type = "door"
-prompt_text = "△ Enter"
+prompt_text = "{INTERACT} Enter"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("1")
