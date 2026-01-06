@@ -26,6 +26,8 @@ const INPUT_ACTION_LABELS := {
 const JOYPAD_DEADZONE := 0.2
 const JOYPAD_IGNORE_KEYWORDS := ["Keyboard", "Virtual", "Steam"]
 const JOYPAD_PREFERRED_KEYWORDS := ["DualSense", "Wireless Controller", "Sony", "PS5"]
+const WHITEOUT_FADE_MIN := 0.5
+const WHITEOUT_FADE_MAX := 3.0
 
 var mechanic_broken := false
 var boss_defeated := false
@@ -140,14 +142,13 @@ func request_scene_change(scene_name: StringName, spawn_marker: StringName = "Pl
 		state = GameState.HUB_FREE if scene_name == "Hub" else GameState.BOSSROOM_FREE
 		_set_player_movement(true)
 		return
+	var fade_time: float = WHITEOUT_FADE_MAX
+	var start_boundary_id := -1
 	if AudioDirector.instance:
-		AudioDirector.instance.fade_out_current_ambient()
-		AudioDirector.instance.prepare_transition_silence()
-	await whiteout_ui.fade_to_white(0.4)
+		start_boundary_id = AudioDirector.instance.get_boundary_id()
+		AudioDirector.instance.fade_out_all(fade_time)
+	await whiteout_ui.fade_to_white(fade_time)
 	if AudioDirector.instance:
-		var wait_time: float = AudioDirector.instance.get_time_to_next_bar()
-		if wait_time > 0.0:
-			await get_tree().create_timer(wait_time).timeout
 		AudioDirector.instance.stop_all_music()
 	_do_scene_change(scene_name, spawn_marker)
 	if AudioDirector.instance:

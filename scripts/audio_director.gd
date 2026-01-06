@@ -1,23 +1,62 @@
 extends Node
 
+signal boundary_reached(scene_name: StringName)
+
 static var instance: Node
 
-const BAR_LENGTH := 4.0
+const SEGMENT_FALLBACK_LENGTH := 4.0
 const HUB_LAYER_MAX_DISTANCE := 420.0
+const HUB_LAYER_BASE_DB := -8.0
+const HUB_LAYER_SILENT_DB := -80.0
+const HUB_LAYER2_MIN_DB := -26.0
+const HUB_LAYER2_MAX_DB := -2.0
+const HUB_LAYER3_MIN_DB := -38.0
+const HUB_LAYER3_MAX_DB := -4.0
+const BOSS_LAYER_DB := -6.0
 
-var hub_base: AudioStreamPlayer
-var hub_layer: AudioStreamPlayer
+const HUB_LAYER1_INTRO_PATH := "res://assets/music/hub_layer_1_intro.mp3"
+const HUB_LAYER1_BASE_PATH := "res://assets/music/hub_layer_1_base.mp3"
+const HUB_LAYER2_BASE_PATH := "res://assets/music/hub_layer_2_base.mp3"
+const HUB_LAYER3_BASE_PATH := "res://assets/music/hub_layer_3_base.mp3"
+
+const BOSS_LAYER1_INTRO_PATH := "res://assets/music/bossroom_layer_1_intro.mp3"
+const BOSS_LAYER2_INTRO_PATH := "res://assets/music/bossroom_layer_2_intro.mp3"
+const BOSS_LAYER1_BASE_PATHS := [
+	"res://assets/music/bossroom_layer_1_base_1.mp3",
+	"res://assets/music/bossroom_layer_1_base_2.mp3",
+]
+const BOSS_LAYER2_BASE_PATHS := [
+	"res://assets/music/bossroom_layer_2_base_1.mp3",
+	"res://assets/music/bossroom_layer_2_base_2.mp3",
+	"res://assets/music/bossroom_layer_2_base_3.mp3",
+]
+
+var hub_layer1: AudioStreamPlayer
 var hub_layer2: AudioStreamPlayer
-var ambient: AudioStreamPlayer
-var boss_music: AudioStreamPlayer
+var hub_layer3: AudioStreamPlayer
+var boss_layer1: AudioStreamPlayer
+var boss_layer2: AudioStreamPlayer
 
-var music_start_time := 0.0
-var dialogue_suppressed := false
-var target_layer_volume := -80.0
-var target_layer2_volume := -80.0
+var _current_scene: StringName = ""
+var _hub_mode := "intro"
+var _boss_mode := "intro"
+var _boss_mode_target := "intro"
+var _boss_visible := false
+var _boss_music_enabled := true
+var _transition_fading := false
+var _hub_layers_suppressed := false
+
+var _fade_tween: Tween
+var _rng := RandomNumberGenerator.new()
+var _stream_cache: Dictionary = {}
+var _boundary_id := 0
+
+var _boss_last_layer1_path := ""
+var _boss_last_layer2_path := ""
 
 func _ready() -> void:
 	instance = self
+	_rng.randomize()
 	_setup_players()
 
 func _exit_tree() -> void:
@@ -25,126 +64,257 @@ func _exit_tree() -> void:
 		instance = null
 
 func _setup_players() -> void:
-	hub_base = _make_player("HubBase")
-	hub_layer = _make_player("HubLayer")
+	hub_layer1 = _make_player("HubLayer1")
 	hub_layer2 = _make_player("HubLayer2")
-	ambient = _make_player("Ambient")
-	boss_music = _make_player("BossMusic")
+	hub_layer3 = _make_player("HubLayer3")
+	boss_layer1 = _make_player("BossLayer1")
+	boss_layer2 = _make_player("BossLayer2")
+	hub_layer1.finished.connect(_on_hub_master_finished)
+	boss_layer1.finished.connect(_on_boss_master_finished)
+	boss_layer2.finished.connect(_on_boss_slave_finished)
 
 func _make_player(player_name: String) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
 	player.name = player_name
-	player.stream = _make_silent_stream()
-	player.volume_db = -8.0
+	player.volume_db = HUB_LAYER_SILENT_DB
 	add_child(player)
 	return player
 
-func _make_silent_stream() -> AudioStreamGenerator:
-	var generator := AudioStreamGenerator.new()
-	generator.mix_rate = 44100
-	generator.buffer_length = 0.5
-	return generator
-
-func _process(_delta: float) -> void:
-	_fill_silence(hub_base)
-	_fill_silence(hub_layer)
-	_fill_silence(hub_layer2)
-	_fill_silence(ambient)
-	_fill_silence(boss_music)
-
-	hub_layer.volume_db = lerp(hub_layer.volume_db, target_layer_volume, 4.0 * _delta)
-	hub_layer2.volume_db = lerp(hub_layer2.volume_db, target_layer2_volume, 4.0 * _delta)
-
-	if SceneManager.instance and SceneManager.instance.current_scene_name == "Hub":
-		var player: CharacterBody2D = SceneManager.instance.player
-		var guardian_node: Node = SceneManager.instance.current_level.get_node_or_null("Guardian") if SceneManager.instance.current_level else null
-		if player and guardian_node and guardian_node is Node2D:
-			var guardian: Node2D = guardian_node
-			var distance := player.global_position.distance_to(guardian.global_position)
-			set_hub_layers_distance(distance, HUB_LAYER_MAX_DISTANCE)
-
-func _fill_silence(player: AudioStreamPlayer) -> void:
-	if player == null or not player.playing:
-		return
-	var playback := player.get_stream_playback()
-	if playback == null:
-		return
-	var frames: int = playback.get_frames_available()
-	for i in range(frames):
-		playback.push_frame(Vector2.ZERO)
+func _process(delta: float) -> void:
+	if _current_scene == "Hub":
+		_update_hub_layers(delta)
+	elif _current_scene == "BossRoom":
+		_update_boss_visibility()
 
 func start_scene_audio(scene_name: StringName) -> void:
+	stop_all_music()
+	_current_scene = scene_name
 	if scene_name == "Hub":
-		_start_hub_audio()
+		_start_hub_intro()
 	elif scene_name == "BossRoom":
-		_start_boss_audio()
-
-func _start_hub_audio() -> void:
-	_stop_all_music()
-	ambient.play()
-	ambient.volume_db = -6.0
-	hub_base.play()
-	hub_layer.play()
-	hub_layer2.play()
-	hub_layer.volume_db = -80.0
-	hub_layer2.volume_db = -80.0
-	target_layer_volume = -80.0
-	target_layer2_volume = -80.0
-	music_start_time = Time.get_ticks_msec() / 1000.0
-
-func _start_boss_audio() -> void:
-	_stop_all_music()
-	ambient.play()
-	ambient.volume_db = -6.0
-	boss_music.stop()
-	music_start_time = Time.get_ticks_msec() / 1000.0
-
-func _stop_all_music() -> void:
-	hub_base.stop()
-	hub_layer.stop()
-	hub_layer2.stop()
-	boss_music.stop()
-
-func fade_out_current_ambient() -> void:
-	if ambient:
-		ambient.volume_db = -24.0
-
-func set_hub_layers_distance(distance: float, max_distance: float) -> void:
-	if dialogue_suppressed:
-		target_layer_volume = -80.0
-		target_layer2_volume = -80.0
-		return
-	var t: float = clamp(1.0 - (distance / max_distance), 0.0, 1.0)
-	target_layer_volume = lerp(-30.0, -6.0, t)
-	target_layer2_volume = lerp(-42.0, -8.0, t * t)
-
-func set_hub_dialogue_suppressed(enabled: bool) -> void:
-	dialogue_suppressed = enabled
-	if enabled:
-		target_layer_volume = -80.0
-		target_layer2_volume = -80.0
-
-func get_time_to_next_bar() -> float:
-	var now := Time.get_ticks_msec() / 1000.0
-	var elapsed := now - music_start_time
-	if elapsed < 0.0:
-		return 0.0
-	var mod := fmod(elapsed, BAR_LENGTH)
-	if mod < 0.05:
-		return 0.0
-	return BAR_LENGTH - mod
-
-func stop_boss_music() -> void:
-	boss_music.stop()
-
-func start_boss_music() -> void:
-	if not boss_music.playing:
-		boss_music.play()
-		music_start_time = Time.get_ticks_msec() / 1000.0
+		_start_boss_intro()
 
 func stop_all_music() -> void:
-	_stop_all_music()
+	hub_layer1.stop()
+	hub_layer2.stop()
+	hub_layer3.stop()
+	boss_layer1.stop()
+	boss_layer2.stop()
+	_transition_fading = false
+
+func stop_boss_music() -> void:
+	_boss_music_enabled = false
+	boss_layer1.stop()
+	boss_layer2.stop()
+
+func start_boss_music() -> void:
+	if _current_scene != "BossRoom":
+		return
+	_boss_music_enabled = true
+
+func fade_out_all(duration: float) -> void:
+	_transition_fading = true
+	_fade_players([hub_layer1, hub_layer2, hub_layer3, boss_layer1, boss_layer2], HUB_LAYER_SILENT_DB, duration)
 
 func prepare_transition_silence() -> void:
-	target_layer_volume = -80.0
-	target_layer2_volume = -80.0
+	if _fade_tween and _fade_tween.is_running():
+		_fade_tween.kill()
+	_transition_fading = false
+
+func get_time_to_next_boundary() -> float:
+	var master := _get_master_player()
+	if master == null or master.stream == null or not master.playing:
+		return 0.0
+	var length := master.stream.get_length()
+	if length <= 0.0:
+		return 0.0
+	var position := master.get_playback_position()
+	return max(length - position, 0.0)
+
+func get_segment_length() -> float:
+	var master := _get_master_player()
+	if master == null or master.stream == null:
+		return SEGMENT_FALLBACK_LENGTH
+	var length := master.stream.get_length()
+	return length if length > 0.0 else SEGMENT_FALLBACK_LENGTH
+
+func is_master_playing() -> bool:
+	var master := _get_master_player()
+	return master != null and master.playing
+
+func set_hub_dialogue_suppressed(enabled: bool) -> void:
+	_hub_layers_suppressed = enabled
+	if enabled:
+		hub_layer2.volume_db = HUB_LAYER_SILENT_DB
+		hub_layer3.volume_db = HUB_LAYER_SILENT_DB
+
+func _start_hub_intro() -> void:
+	_hub_mode = "intro"
+	hub_layer1.stream = _get_stream(HUB_LAYER1_INTRO_PATH)
+	hub_layer1.volume_db = HUB_LAYER_BASE_DB
+	hub_layer1.play()
+	hub_layer2.stream = _get_stream(HUB_LAYER2_BASE_PATH)
+	hub_layer2.volume_db = HUB_LAYER_SILENT_DB
+	hub_layer2.stop()
+	hub_layer3.stream = _get_stream(HUB_LAYER3_BASE_PATH)
+	hub_layer3.volume_db = HUB_LAYER_SILENT_DB
+	hub_layer3.stop()
+
+func _on_hub_master_finished() -> void:
+	if _current_scene != "Hub":
+		return
+	if _transition_fading:
+		_restart_hub_layers(true)
+		_boundary_id += 1
+		emit_signal("boundary_reached", _current_scene)
+		return
+	if _hub_mode == "intro":
+		_hub_mode = "base"
+	_restart_hub_layers()
+	_boundary_id += 1
+	emit_signal("boundary_reached", _current_scene)
+
+func _restart_hub_layers(keep_volume: bool = false) -> void:
+	hub_layer1.stream = _get_stream(HUB_LAYER1_BASE_PATH if _hub_mode == "base" else HUB_LAYER1_INTRO_PATH)
+	if not keep_volume:
+		hub_layer1.volume_db = HUB_LAYER_BASE_DB
+	hub_layer1.play()
+	hub_layer2.stream = _get_stream(HUB_LAYER2_BASE_PATH)
+	hub_layer2.play()
+	hub_layer3.stream = _get_stream(HUB_LAYER3_BASE_PATH)
+	hub_layer3.play()
+
+func _update_hub_layers(delta: float) -> void:
+	if hub_layer2 == null or hub_layer3 == null:
+		return
+	var player := SceneManager.instance.player if SceneManager.instance else null
+	var guardian_node := SceneManager.instance.current_level.get_node_or_null("Guardian") if SceneManager.instance and SceneManager.instance.current_level else null
+	if player == null or guardian_node == null:
+		return
+	if not (guardian_node is Node2D):
+		return
+	var guardian := guardian_node as Node2D
+	var distance := player.global_position.distance_to(guardian.global_position)
+	var t: float = clamp(1.0 - (distance / HUB_LAYER_MAX_DISTANCE), 0.0, 1.0)
+	var layer2_target: float = lerp(HUB_LAYER2_MIN_DB, HUB_LAYER2_MAX_DB, t)
+	var layer3_target: float = lerp(HUB_LAYER3_MIN_DB, HUB_LAYER3_MAX_DB, t * t)
+	if _hub_layers_suppressed:
+		layer2_target = HUB_LAYER_SILENT_DB
+		layer3_target = HUB_LAYER_SILENT_DB
+	hub_layer2.volume_db = lerp(hub_layer2.volume_db, layer2_target, 4.0 * delta)
+	hub_layer3.volume_db = lerp(hub_layer3.volume_db, layer3_target, 4.0 * delta)
+
+func _start_boss_intro() -> void:
+	_boss_mode = "intro"
+	_boss_mode_target = "intro"
+	_boss_music_enabled = true
+	_boss_last_layer1_path = BOSS_LAYER1_INTRO_PATH
+	_boss_last_layer2_path = BOSS_LAYER2_INTRO_PATH
+	boss_layer1.stream = _get_stream(BOSS_LAYER1_INTRO_PATH)
+	boss_layer2.stream = _get_stream(BOSS_LAYER2_INTRO_PATH)
+	boss_layer1.volume_db = BOSS_LAYER_DB
+	boss_layer2.volume_db = BOSS_LAYER_DB
+	boss_layer1.play()
+	boss_layer2.play()
+
+func _on_boss_master_finished() -> void:
+	if _current_scene != "BossRoom":
+		return
+	if not _boss_music_enabled:
+		return
+	if _transition_fading:
+		_restart_boss_layers(true)
+		_boundary_id += 1
+		emit_signal("boundary_reached", _current_scene)
+		return
+	if _boss_mode_target != _boss_mode:
+		_boss_mode = _boss_mode_target
+	_restart_boss_layers()
+	_boundary_id += 1
+	emit_signal("boundary_reached", _current_scene)
+
+func _restart_boss_layers(keep_volume: bool = false) -> void:
+	if _boss_mode == "intro":
+		_boss_last_layer1_path = BOSS_LAYER1_INTRO_PATH
+		_boss_last_layer2_path = BOSS_LAYER2_INTRO_PATH
+	else:
+		_boss_last_layer1_path = _pick_random(BOSS_LAYER1_BASE_PATHS)
+		_boss_last_layer2_path = _pick_random(BOSS_LAYER2_BASE_PATHS)
+	boss_layer1.stream = _get_stream(_boss_last_layer1_path)
+	boss_layer2.stream = _get_stream(_boss_last_layer2_path)
+	if not keep_volume:
+		boss_layer1.volume_db = BOSS_LAYER_DB
+		boss_layer2.volume_db = BOSS_LAYER_DB
+	boss_layer1.play()
+	boss_layer2.play()
+
+func _on_boss_slave_finished() -> void:
+	if _current_scene != "BossRoom":
+		return
+	if not _boss_music_enabled or _transition_fading:
+		return
+	if _boss_last_layer2_path == "":
+		return
+	boss_layer2.stream = _get_stream(_boss_last_layer2_path)
+	boss_layer2.volume_db = BOSS_LAYER_DB
+	boss_layer2.play()
+
+func _pick_random(paths: Array) -> String:
+	if paths.is_empty():
+		return ""
+	return paths[_rng.randi_range(0, paths.size() - 1)]
+
+func _update_boss_visibility() -> void:
+	var player := SceneManager.instance.player if SceneManager.instance else null
+	if player == null:
+		return
+	var camera := player.get_node_or_null("Camera2D")
+	if camera == null:
+		return
+	var boss := SceneManager.instance.current_level.get_node_or_null("Boss") if SceneManager.instance and SceneManager.instance.current_level else null
+	if boss == null:
+		return
+	var view_size: Vector2 = camera.get_viewport_rect().size / camera.zoom
+	var center: Vector2 = camera.get_screen_center_position()
+	var rect := Rect2(center - view_size * 0.5, view_size)
+	var visible := rect.has_point(boss.global_position)
+	if visible != _boss_visible:
+		_boss_visible = visible
+		if _boss_music_enabled:
+			_boss_mode_target = "base" if _boss_visible else "intro"
+
+func _get_master_player() -> AudioStreamPlayer:
+	return hub_layer1 if _current_scene == "Hub" else boss_layer1 if _current_scene == "BossRoom" else null
+
+func _get_stream(path: String) -> AudioStream:
+	if _stream_cache.has(path):
+		return _stream_cache[path]
+	var stream: AudioStream = load(path)
+	_stream_cache[path] = stream
+	return stream
+
+func _fade_players(players: Array, target_db: float, duration: float) -> void:
+	if _fade_tween and _fade_tween.is_running():
+		_fade_tween.kill()
+	_fade_tween = create_tween()
+	for player in players:
+		if player:
+			_fade_tween.tween_property(player, "volume_db", target_db, duration)
+
+func get_debug_state() -> Dictionary:
+	return {
+		"scene": _current_scene,
+		"hub_mode": _hub_mode,
+		"boss_mode": _boss_mode,
+		"boss_target": _boss_mode_target,
+		"boss_visible": _boss_visible,
+		"boss_enabled": _boss_music_enabled,
+		"time_to_next_boundary": get_time_to_next_boundary(),
+		"segment_length": get_segment_length(),
+		"boundary_id": _boundary_id,
+		"boss_layer1": _boss_last_layer1_path,
+		"boss_layer2": _boss_last_layer2_path,
+	}
+
+func get_boundary_id() -> int:
+	return _boundary_id

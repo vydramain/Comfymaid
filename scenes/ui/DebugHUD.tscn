@@ -32,3 +32,11 @@ text = "vel: --"
 [node name="InputLabel" type="Label" parent="VBox"]
 unique_name_in_owner = true
 text = "Input: --"
+
+[node name="AudioLabel" type="Label" parent="VBox"]
+unique_name_in_owner = true
+text = "Audio: --"
+
+[node name="BossLabel" type="Label" parent="VBox"]
+unique_name_in_owner = true
+text = "Boss: --"
