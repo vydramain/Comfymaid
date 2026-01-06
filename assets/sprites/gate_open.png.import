@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d3h1w1h3c06je"
-path="res://.godot/imported/cave_back.jpg-17b4abd897e097760b35ac50b5646535.ctex"
+uid="uid://dk62tt6wuj3x8"
+path="res://.godot/imported/gate_open.png-cbf065a7516ad8e82e0b2e1227689773.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/cave_back.jpg"
-dest_files=["res://.godot/imported/cave_back.jpg-17b4abd897e097760b35ac50b5646535.ctex"]
+source_file="res://assets/sprites/gate_open.png"
+dest_files=["res://.godot/imported/gate_open.png-cbf065a7516ad8e82e0b2e1227689773.ctex"]
 
 [params]
 

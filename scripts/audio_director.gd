@@ -5,13 +5,13 @@ signal boundary_reached(scene_name: StringName)
 static var instance: Node
 
 const SEGMENT_FALLBACK_LENGTH := 4.0
-const HUB_LAYER_MAX_DISTANCE := 420.0
+const HUB_LAYER_MAX_DISTANCE := 840.0
 const HUB_LAYER_BASE_DB := -8.0
 const HUB_LAYER_SILENT_DB := -80.0
 const HUB_LAYER2_MIN_DB := -26.0
-const HUB_LAYER2_MAX_DB := -2.0
+const HUB_LAYER2_MAX_DB := -10.0
 const HUB_LAYER3_MIN_DB := -38.0
-const HUB_LAYER3_MAX_DB := -4.0
+const HUB_LAYER3_MAX_DB := -10.0
 const BOSS_LAYER_DB := -6.0
 
 const HUB_LAYER1_INTRO_PATH := "res://assets/music/hub_layer_1_intro.mp3"
@@ -95,12 +95,14 @@ func start_scene_audio(scene_name: StringName) -> void:
 		_start_boss_intro()
 
 func stop_all_music() -> void:
+	if _fade_tween and _fade_tween.is_running():
+		_fade_tween.kill()
+	_transition_fading = false
 	hub_layer1.stop()
 	hub_layer2.stop()
 	hub_layer3.stop()
 	boss_layer1.stop()
 	boss_layer2.stop()
-	_transition_fading = false
 
 func stop_boss_music() -> void:
 	_boss_music_enabled = false
@@ -111,6 +113,9 @@ func start_boss_music() -> void:
 	if _current_scene != "BossRoom":
 		return
 	_boss_music_enabled = true
+	if not boss_layer1.playing:
+		_boss_mode = _boss_mode_target
+		_restart_boss_layers()
 
 func fade_out_all(duration: float) -> void:
 	_transition_fading = true
@@ -238,8 +243,8 @@ func _restart_boss_layers(keep_volume: bool = false) -> void:
 		_boss_last_layer1_path = BOSS_LAYER1_INTRO_PATH
 		_boss_last_layer2_path = BOSS_LAYER2_INTRO_PATH
 	else:
-		_boss_last_layer1_path = _pick_random(BOSS_LAYER1_BASE_PATHS)
-		_boss_last_layer2_path = _pick_random(BOSS_LAYER2_BASE_PATHS)
+		_boss_last_layer1_path = _pick_random_excluding(BOSS_LAYER1_BASE_PATHS, _boss_last_layer1_path)
+		_boss_last_layer2_path = _pick_random_excluding(BOSS_LAYER2_BASE_PATHS, _boss_last_layer2_path)
 	boss_layer1.stream = _get_stream(_boss_last_layer1_path)
 	boss_layer2.stream = _get_stream(_boss_last_layer2_path)
 	if not keep_volume:
@@ -253,16 +258,25 @@ func _on_boss_slave_finished() -> void:
 		return
 	if not _boss_music_enabled or _transition_fading:
 		return
-	if _boss_last_layer2_path == "":
-		return
-	boss_layer2.stream = _get_stream(_boss_last_layer2_path)
-	boss_layer2.volume_db = BOSS_LAYER_DB
-	boss_layer2.play()
+	# Keep layer2 idle until the master restarts both layers on the boundary.
+	return
 
 func _pick_random(paths: Array) -> String:
 	if paths.is_empty():
 		return ""
 	return paths[_rng.randi_range(0, paths.size() - 1)]
+
+func _pick_random_excluding(paths: Array, last_path: String) -> String:
+	if paths.is_empty():
+		return ""
+	if paths.size() == 1:
+		return paths[0]
+	var next := last_path
+	var safety := 0
+	while next == last_path and safety < 8:
+		next = paths[_rng.randi_range(0, paths.size() - 1)]
+		safety += 1
+	return next
 
 func _update_boss_visibility() -> void:
 	var player := SceneManager.instance.player if SceneManager.instance else null
@@ -280,8 +294,7 @@ func _update_boss_visibility() -> void:
 	var visible := rect.has_point(boss.global_position)
 	if visible != _boss_visible:
 		_boss_visible = visible
-		if _boss_music_enabled:
-			_boss_mode_target = "base" if _boss_visible else "intro"
+		_boss_mode_target = "base" if _boss_visible else "intro"
 
 func _get_master_player() -> AudioStreamPlayer:
 	return hub_layer1 if _current_scene == "Hub" else boss_layer1 if _current_scene == "BossRoom" else null

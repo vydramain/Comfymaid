@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://blt82xv7cn06e"
-path="res://.godot/imported/hub_back.jpg-0b3ff1e28248d744cfd4d5684b562c25.ctex"
+uid="uid://dv5uckcrxunx2"
+path="res://.godot/imported/gate_closed.png-c38a82b899af4b228de38111b559d061.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/hub_back.jpg"
-dest_files=["res://.godot/imported/hub_back.jpg-0b3ff1e28248d744cfd4d5684b562c25.ctex"]
+source_file="res://assets/sprites/gate_closed.png"
+dest_files=["res://.godot/imported/gate_closed.png-c38a82b899af4b228de38111b559d061.ctex"]
 
 [params]
 

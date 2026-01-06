@@ -34,6 +34,7 @@ var boss_defeated := false
 var boss_revived_once := false
 var guardian_intro_done := false
 var guardian_post_dialogue_done := false
+var guardian_death_hint_pending := false
 var world_reset_count := 0
 
 var state: GameState = GameState.HUB_FREE
@@ -175,6 +176,7 @@ func request_death_reset() -> void:
 		return
 	state = GameState.RESET
 	_reset_run_flags()
+	guardian_death_hint_pending = true
 	await request_scene_change("Hub", "PlayerSpawn")
 
 func _reset_run_flags() -> void:
@@ -183,6 +185,7 @@ func _reset_run_flags() -> void:
 	boss_revived_once = false
 	guardian_intro_done = false
 	guardian_post_dialogue_done = false
+	guardian_death_hint_pending = false
 
 func notify_boss_revive() -> void:
 	if not boss_revived_once:

@@ -14,6 +14,10 @@ const GUARDIAN_IDLE_COLOR := Color(0.9, 0.9, 0.6)
 	"Но ты можешь спуститься.",
 	"Попробуй спуститься."
 ]
+@export var death_hint_lines: Array[String] = [
+	"Ты снова здесь.",
+	"Пробуй. Снова и снова."
+]
 @export var post_boss_lines: Array[String] = [
 	"Ты повлиял на баланс сил в мире.",
 	"А что титов?",
@@ -53,6 +57,10 @@ func interact(_interactor: Node) -> void:
 
 func _play_pre_boss() -> void:
 	var dialogue: Node = GameDirector.instance.dialogue_ui
+	if GameDirector.instance.guardian_death_hint_pending:
+		dialogue.start_dialogue(death_hint_lines)
+		GameDirector.instance.guardian_death_hint_pending = false
+		return
 	if not GameDirector.instance.guardian_intro_done:
 		dialogue.start_dialogue(pre_boss_lines)
 		dialogue.dialogue_finished.connect(_on_intro_finished, CONNECT_ONE_SHOT)

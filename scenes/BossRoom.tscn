@@ -1,9 +1,9 @@
 [gd_scene load_steps=7 format=3 uid="uid://cpxq8xcwol1wq"]
 
 [ext_resource type="PackedScene" uid="uid://cpxq8yckom11q" path="res://scenes/Boss.tscn" id="1"]
-[ext_resource type="Texture2D" uid="uid://d3h1w1h3c06je" path="res://assets/sprites/cave_back.jpg" id="1_5g46w"]
+[ext_resource type="Texture2D" uid="uid://7kykclyblehj" path="res://assets/sprites/cave_back.png" id="1_5g46w"]
 [ext_resource type="PackedScene" uid="uid://bjdu056pv45ik" path="res://scenes/MechanicWord.tscn" id="2"]
-[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://5lymwsiiobny" path="res://scenes/Door.tscn" id="3"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(1750, 40)
@@ -16,8 +16,8 @@ size = Vector2(200, 20)
 [node name="Background" type="Sprite2D" parent="."]
 texture_filter = 1
 texture_repeat = 1
-position = Vector2(11, -156)
-scale = Vector2(6.822259, 5.1845236)
+position = Vector2(18.576355, -39.375015)
+scale = Vector2(14.586804, 10.747023)
 texture = ExtResource("1_5g46w")
 
 [node name="CameraBounds" type="Node2D" parent="."]
@@ -119,7 +119,8 @@ position = Vector2(755, 201)
 [node name="MechanicWord" parent="." instance=ExtResource("2")]
 z_index = 0
 z_as_relative = true
-position = Vector2(0, -200)
+position = Vector2(-3, -206)
 
 [node name="ExitDoor" parent="." instance=ExtResource("3")]
 position = Vector2(-841, 200)
+target_scene = "Hub"

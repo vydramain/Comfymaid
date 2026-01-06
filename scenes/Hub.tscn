@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://b2b4yyl7qwnu7"]
+[gd_scene load_steps=6 format=3 uid="uid://b2b4yyl7qwnu7"]
 
 [ext_resource type="PackedScene" uid="uid://ctyxbgvitqjo3" path="res://scenes/Guardian.tscn" id="1"]
-[ext_resource type="Texture2D" uid="uid://blt82xv7cn06e" path="res://assets/sprites/hub_back.jpg" id="1_4qglb"]
-[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="2"]
+[ext_resource type="Texture2D" uid="uid://cks5qdtuwfcrn" path="res://assets/sprites/back_forest.png" id="1_4qglb"]
+[ext_resource type="PackedScene" uid="uid://5lymwsiiobny" path="res://scenes/Door.tscn" id="2"]
+[ext_resource type="Texture2D" uid="uid://dah70uvah6kw1" path="res://assets/sprites/bonfire.png" id="2_7f5op"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(1500, 40)
@@ -12,20 +13,9 @@ size = Vector2(1500, 40)
 [node name="Background" type="Sprite2D" parent="."]
 texture_filter = 1
 texture_repeat = 1
-position = Vector2(-5.0000005, 48)
-scale = Vector2(10.27914, 3.6391754)
+position = Vector2(0, -79)
+scale = Vector2(4.0164065, 3.224921)
 texture = ExtResource("1_4qglb")
-
-[node name="CameraBounds" type="Node2D" parent="."]
-
-[node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
-offset_left = -950.0
-offset_top = -260.0
-offset_right = 950.0
-offset_bottom = 323.0
-
-[node name="PlayerSpawn" type="Marker2D" parent="."]
-position = Vector2(721, 200)
 
 [node name="Floor" type="StaticBody2D" parent="."]
 
@@ -48,7 +38,24 @@ offset_left = -750.0
 offset_top = 240.0
 offset_right = 750.0
 offset_bottom = 402.0
-color = Color(0.15, 0.15, 0.2, 1)
+color = Color(0.07035159, 0.18238586, 0.10349289, 1)
+
+[node name="Bonfire" type="Sprite2D" parent="."]
+texture_filter = 1
+texture_repeat = 1
+position = Vector2(-629, 226)
+texture = ExtResource("2_7f5op")
+
+[node name="CameraBounds" type="Node2D" parent="."]
+
+[node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
+offset_left = -950.0
+offset_top = -260.0
+offset_right = 950.0
+offset_bottom = 323.0
+
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+position = Vector2(721, 200)
 
 [node name="Guardian" parent="." instance=ExtResource("1")]
 position = Vector2(-726, 240)

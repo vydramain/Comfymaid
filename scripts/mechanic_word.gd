@@ -10,7 +10,16 @@ var _broken := false
 @onready var backdrop: ColorRect = $Backdrop
 
 func _ready() -> void:
-	_set_visible(false)
+	if GameDirector.instance and GameDirector.instance.mechanic_broken:
+		_apply_broken_state()
+	else:
+		_set_visible(false)
+
+func _process(_delta: float) -> void:
+	if _enabled or _broken:
+		return
+	if GameDirector.instance and GameDirector.instance.boss_revived_once:
+		enable_word()
 
 func enable_word() -> void:
 	if _broken:
@@ -48,6 +57,18 @@ func _split_visuals() -> void:
 	tween.tween_property(self, "scale", Vector2(1.15, 1.15), 0.08)
 	tween.tween_property(self, "scale", Vector2.ONE, 0.18)
 	_flash_break()
+
+func _apply_broken_state() -> void:
+	_enabled = true
+	_broken = true
+	full_label.visible = false
+	left_label.visible = true
+	right_label.visible = true
+	hurt_area.monitoring = false
+	if backdrop:
+		backdrop.visible = true
+	left_label.position = Vector2(-12, 0)
+	right_label.position = Vector2(12, 0)
 
 func _pulse_visible() -> void:
 	var tween := create_tween()
