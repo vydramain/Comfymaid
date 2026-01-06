@@ -4,34 +4,90 @@ const BOSS_MAX_HP := 5
 const BOSS_GRAVITY := 1400.0
 const BOSS_MAX_FALL_SPEED := 900.0
 const BOSS_IFRAME_DURATION := 0.3
+const BOSS_HIT_FLASH_INTERVAL := 0.08
 const BOSS_INVALID_DEATH_SHRINK_TIME := 0.3
 const BOSS_INVALID_DEATH_PAUSE := 0.5
 const BOSS_FINAL_DEATH_FADE_TIME := 0.4
 
+@export var ai_enabled := true
+@export var move_speed := 120.0
+@export var acceleration := 800.0
+@export var stop_distance := 12.0
+@export var debug_boss := false
+@export var smoke_scene: PackedScene
+
 var _hp := BOSS_MAX_HP
 var _invuln := false
 var _reviving := false
+var _facing := -1
+var _flicker_id := 0
+var _base_modulate := Color(1, 1, 1)
 
-@onready var visual: Node2D = $Visual
 @onready var damage_area: Area2D = $DamageArea
+@onready var anim_player: AnimationPlayer = $AnimationPlayer
+@onready var sprite: Sprite2D = $Sprite
+@onready var left_foot: Marker2D = $FootMarkers/LeftFootMarker
+@onready var right_foot: Marker2D = $FootMarkers/RightFootMarker
 
 func _ready() -> void:
 	_hp = BOSS_MAX_HP
 	if damage_area:
 		damage_area.body_entered.connect(_on_damage_body)
+	if sprite:
+		_base_modulate = sprite.modulate
+	_play_animation("idle")
 
 func _physics_process(delta: float) -> void:
+	_update_ai(delta)
+	_apply_gravity(delta)
+	move_and_slide()
+
+func _update_ai(delta: float) -> void:
+	var can_move := ai_enabled and not _reviving and not _is_defeated()
+	var player := SceneManager.instance.player if SceneManager.instance else null
+	if can_move and player:
+		var to_player := player.global_position - global_position
+		var dir_x: float = sign(to_player.x)
+		if abs(to_player.x) <= stop_distance:
+			dir_x = 0.0
+		if dir_x != 0.0:
+			_facing = int(dir_x)
+		var target_speed := float(dir_x) * move_speed
+		velocity.x = move_toward(velocity.x, target_speed, acceleration * delta)
+		_update_animation(abs(velocity.x) > 1.0)
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, acceleration * delta)
+		_update_animation(false)
+
+func _apply_gravity(delta: float) -> void:
 	velocity.y += BOSS_GRAVITY * delta
 	if velocity.y > BOSS_MAX_FALL_SPEED:
 		velocity.y = BOSS_MAX_FALL_SPEED
-	move_and_slide()
+
+func _update_animation(moving: bool) -> void:
+	if anim_player == null:
+		return
+	if moving:
+		_play_animation("walk")
+	else:
+		_play_animation("idle")
+
+func _play_animation(name: StringName) -> void:
+	if anim_player == null:
+		return
+	if anim_player.current_animation == name:
+		return
+	anim_player.play(name)
+
+func _is_defeated() -> bool:
+	return GameDirector.instance != null and GameDirector.instance.boss_defeated
 
 func take_hit(amount: int) -> void:
 	if _invuln or _reviving:
 		return
 	_hp = max(_hp - amount, 0)
-	_flash_white()
 	if _hp <= 0:
+		_start_flicker()
 		_handle_death()
 	else:
 		_start_invuln()
@@ -48,13 +104,16 @@ func _invalid_death() -> void:
 	_reviving = true
 	_invuln = true
 	var tween := create_tween()
-	tween.tween_property(visual, "scale", Vector2(0.7, 0.7), BOSS_INVALID_DEATH_SHRINK_TIME)
+	tween.tween_property(self, "scale", Vector2(0.7, 0.7), BOSS_INVALID_DEATH_SHRINK_TIME)
 	tween.tween_interval(BOSS_INVALID_DEATH_PAUSE)
 	await tween.finished
 	_hp = BOSS_MAX_HP
-	visual.scale = Vector2.ONE
+	scale = Vector2.ONE
 	_reviving = false
 	_invuln = false
+	_stop_flicker()
+	if sprite:
+		sprite.modulate = _base_modulate
 	GameDirector.instance.notify_boss_revive()
 	_enable_mechanic_word()
 	_trigger_camera_hint()
@@ -62,8 +121,9 @@ func _invalid_death() -> void:
 func _final_death() -> void:
 	_reviving = true
 	_invuln = true
+	_stop_flicker()
 	var tween := create_tween()
-	tween.tween_property(visual, "modulate", Color(0.4, 0.4, 0.4), BOSS_FINAL_DEATH_FADE_TIME)
+	tween.tween_property(sprite, "modulate", Color(0.4, 0.4, 0.4), BOSS_FINAL_DEATH_FADE_TIME)
 	await tween.finished
 	if AudioDirector.instance:
 		AudioDirector.instance.stop_boss_music()
@@ -82,18 +142,57 @@ func _trigger_camera_hint() -> void:
 		if player and player.has_method("trigger_hint_up"):
 			player.trigger_hint_up()
 
-func _flash_white() -> void:
-	if visual == null:
-		return
-	visual.modulate = Color(1.6, 1.6, 1.6)
-	var tween := create_tween()
-	tween.tween_property(visual, "modulate", Color(1, 1, 1), 0.15)
-
 func _start_invuln() -> void:
 	_invuln = true
+	_start_flicker()
 	await get_tree().create_timer(BOSS_IFRAME_DURATION).timeout
 	_invuln = false
+	_stop_flicker()
+
+func _start_flicker() -> void:
+	if sprite == null:
+		return
+	_flicker_id += 1
+	var current_id := _flicker_id
+	_flicker_loop(current_id)
+
+func _flicker_loop(flicker_id: int) -> void:
+	while _invuln and _flicker_id == flicker_id:
+		sprite.modulate = Color(1.6, 1.6, 1.6)
+		await get_tree().create_timer(BOSS_HIT_FLASH_INTERVAL).timeout
+		if not _invuln or _flicker_id != flicker_id:
+			break
+		sprite.modulate = _base_modulate
+		await get_tree().create_timer(BOSS_HIT_FLASH_INTERVAL).timeout
+
+func _stop_flicker() -> void:
+	if sprite == null:
+		return
+	_flicker_id += 1
+	sprite.modulate = _base_modulate
 
 func _on_damage_body(body: Node) -> void:
 	if body and body.has_method("take_hit") and body.is_in_group("player"):
 		body.take_hit(1)
+
+func spawn_smoke_left() -> void:
+	_spawn_smoke(left_foot)
+
+func spawn_smoke_right() -> void:
+	_spawn_smoke(right_foot)
+
+func _spawn_smoke(marker: Marker2D) -> void:
+	if smoke_scene == null or marker == null:
+		return
+	if not ai_enabled or _reviving or _is_defeated():
+		return
+	var smoke := smoke_scene.instantiate()
+	var root := SceneManager.instance.current_level if SceneManager.instance else get_parent()
+	if root:
+		root.add_child(smoke)
+		if smoke is Node2D:
+			(smoke as Node2D).global_position = marker.global_position
+	if smoke.has_method("set_facing"):
+		smoke.set_facing(_facing)
+	if debug_boss:
+		print("Boss smoke at ", marker.global_position)

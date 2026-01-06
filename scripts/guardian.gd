@@ -11,7 +11,8 @@ const GUARDIAN_IDLE_COLOR := Color(0.9, 0.9, 0.6)
 ]
 @export var extra_lines: Array[String] = [
 	"Я не помню, что было до этого.",
-	"Но ты можешь спуститься."
+	"Но ты можешь спуститься.",
+	"Попробуй спуститься."
 ]
 @export var post_boss_lines: Array[String] = [
 	"Ты повлиял на баланс сил в мире.",
@@ -43,6 +44,8 @@ func interact(_interactor: Node) -> void:
 		return
 	if GameDirector.instance == null or GameDirector.instance.dialogue_ui == null:
 		return
+	if GameDirector.instance.dialogue_ui.is_active():
+		return
 	if GameDirector.instance.boss_defeated:
 		_play_post_boss()
 		return
@@ -54,10 +57,16 @@ func _play_pre_boss() -> void:
 		dialogue.start_dialogue(pre_boss_lines)
 		dialogue.dialogue_finished.connect(_on_intro_finished, CONNECT_ONE_SHOT)
 	elif _extra_index < extra_lines.size():
-		dialogue.start_dialogue([extra_lines[_extra_index]])
+		var lines: Array[String] = [extra_lines[_extra_index]]
+		dialogue.start_dialogue(lines)
 		_extra_index += 1
 	else:
-		dialogue.start_dialogue([extra_lines.back()])
+		if extra_lines.is_empty():
+			var lines: Array[String] = [pre_boss_lines.back()]
+			dialogue.start_dialogue(lines)
+		else:
+			var lines: Array[String] = [extra_lines.back()]
+			dialogue.start_dialogue(lines)
 
 func _on_intro_finished() -> void:
 	if GameDirector.instance:

@@ -33,6 +33,11 @@ position = Vector2(0, 2)
 shape = SubResource("CapsuleShape2D_p0vlq")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+limit_smoothed = true
+drag_horizontal_enabled = true
+drag_vertical_enabled = true
+drag_left_margin = 0.5
+drag_right_margin = 0.5
 
 [node name="HintMarker" type="Marker2D" parent="."]
 position = Vector2(0, -34)

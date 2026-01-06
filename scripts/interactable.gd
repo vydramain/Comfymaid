@@ -14,7 +14,12 @@ func _ready() -> void:
     add_to_group("interactable")
 
 func is_enabled() -> bool:
-    return enabled
+    if not enabled:
+        return false
+    if interaction_type == "door" and requires_guardian_intro:
+        if GameDirector.instance and not GameDirector.instance.guardian_intro_done:
+            return false
+    return true
 
 func get_prompt_text() -> String:
     return prompt_text

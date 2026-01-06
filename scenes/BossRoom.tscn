@@ -1,25 +1,35 @@
-[gd_scene load_steps=6 format=3 uid="uid://b1o2s3r4o5m6a7"]
+[gd_scene load_steps=7 format=3 uid="uid://cpxq8xcwol1wq"]
 
-[ext_resource type="PackedScene" path="res://scenes/Boss.tscn" id=1]
-[ext_resource type="PackedScene" path="res://scenes/MechanicWord.tscn" id=2]
-[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id=3]
+[ext_resource type="PackedScene" uid="uid://cpxq8yckom11q" path="res://scenes/Boss.tscn" id="1"]
+[ext_resource type="Texture2D" uid="uid://d3h1w1h3c06je" path="res://assets/sprites/cave_back.jpg" id="1_5g46w"]
+[ext_resource type="PackedScene" uid="uid://bjdu056pv45ik" path="res://scenes/MechanicWord.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="3"]
 
-[sub_resource type="RectangleShape2D" id=1]
-size = Vector2(960, 40)
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(1750, 40)
 
-[sub_resource type="RectangleShape2D" id=2]
+[sub_resource type="RectangleShape2D" id="2"]
 size = Vector2(200, 20)
 
 [node name="BossRoom" type="Node2D"]
 
+[node name="Background" type="Sprite2D" parent="."]
+texture_filter = 1
+texture_repeat = 1
+position = Vector2(11, -156)
+scale = Vector2(6.822259, 5.1845236)
+texture = ExtResource("1_5g46w")
+
 [node name="CameraBounds" type="Node2D" parent="."]
 
 [node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
-size = Vector2(960, 720)
-position = Vector2(-480, -480)
+offset_left = -1000.0
+offset_top = -440.0
+offset_right = 1000.0
+offset_bottom = 344.0
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
-position = Vector2(-320, 200)
+position = Vector2(-842, 201)
 
 [node name="BossSpawn" type="Marker2D" parent="."]
 position = Vector2(120, 200)
@@ -27,33 +37,89 @@ position = Vector2(120, 200)
 [node name="Floor" type="StaticBody2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
-shape = SubResource("1")
 position = Vector2(0, 260)
+shape = SubResource("1")
+
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="Floor"]
+position = Vector2(895, -172)
+rotation = 1.5707964
+shape = SubResource("1")
+
+[node name="CollisionShape2D3" type="CollisionShape2D" parent="Floor"]
+position = Vector2(-895, -280)
+rotation = 1.5707964
+shape = SubResource("1")
 
 [node name="FloorVisual" type="ColorRect" parent="Floor"]
+offset_left = -875.0
+offset_top = 240.0
+offset_right = 875.0
+offset_bottom = 346.0
 color = Color(0.12, 0.12, 0.16, 1)
-size = Vector2(960, 40)
-position = Vector2(-480, 240)
 
-[node name="UpperPlatform" type="StaticBody2D" parent="."]
+[node name="UpperPlatform" type="StaticBody2D" parent="Floor"]
+position = Vector2(290, -49)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor/UpperPlatform"]
+position = Vector2(0, -20)
+shape = SubResource("2")
+
+[node name="PlatformVisual" type="ColorRect" parent="Floor/UpperPlatform"]
+offset_left = -100.0
+offset_top = -30.0
+offset_right = 100.0
+offset_bottom = -10.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="UpperPlatform2" type="StaticBody2D" parent="Floor"]
 position = Vector2(0, -160)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="UpperPlatform"]
-shape = SubResource("2")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor/UpperPlatform2"]
 position = Vector2(0, -20)
+shape = SubResource("2")
 
-[node name="PlatformVisual" type="ColorRect" parent="UpperPlatform"]
+[node name="PlatformVisual" type="ColorRect" parent="Floor/UpperPlatform2"]
+offset_left = -100.0
+offset_top = -30.0
+offset_right = 100.0
+offset_bottom = -10.0
 color = Color(0.2, 0.2, 0.25, 1)
-size = Vector2(200, 20)
-position = Vector2(-100, -30)
+
+[node name="UpperPlatform3" type="StaticBody2D" parent="Floor"]
+position = Vector2(555, 36)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor/UpperPlatform3"]
+position = Vector2(0, -20)
+shape = SubResource("2")
+
+[node name="PlatformVisual" type="ColorRect" parent="Floor/UpperPlatform3"]
+offset_left = -100.0
+offset_top = -30.0
+offset_right = 100.0
+offset_bottom = -10.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="UpperPlatform4" type="StaticBody2D" parent="Floor"]
+position = Vector2(775, 142)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor/UpperPlatform4"]
+position = Vector2(0, -20)
+shape = SubResource("2")
+
+[node name="PlatformVisual" type="ColorRect" parent="Floor/UpperPlatform4"]
+offset_left = -100.0
+offset_top = -30.0
+offset_right = 100.0
+offset_bottom = -10.0
+color = Color(0.2, 0.2, 0.25, 1)
 
 [node name="Boss" parent="." instance=ExtResource("1")]
-position = Vector2(120, 200)
+position = Vector2(755, 201)
 
 [node name="MechanicWord" parent="." instance=ExtResource("2")]
+z_index = 0
+z_as_relative = true
 position = Vector2(0, -200)
 
 [node name="ExitDoor" parent="." instance=ExtResource("3")]
-position = Vector2(-400, 200)
-target_scene = "Hub"
-spawn_marker = "PlayerSpawn"
+position = Vector2(-841, 200)

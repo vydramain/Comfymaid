@@ -1,27 +1,61 @@
-[gd_scene load_steps=1 format=3 uid="uid://m1e2c3h4w5r6d7"]
+[gd_scene load_steps=3 format=3 uid="uid://bjdu056pv45ik"]
 
-[ext_resource type="Script" path="res://scripts/mechanic_word.gd" id=1]
+[ext_resource type="Script" uid="uid://d2q5e03jr0bq5" path="res://scripts/mechanic_word.gd" id="1"]
 
-[sub_resource type="RectangleShape2D" id=1]
-size = Vector2(120, 40)
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(93, 19)
 
 [node name="MechanicWord" type="Node2D"]
 script = ExtResource("1")
+z_index = 10
+z_as_relative = false
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_left = -80.0
+offset_top = -24.0
+offset_right = 80.0
+offset_bottom = 24.0
+color = Color(0, 0, 0, 0.55)
 
 [node name="FullLabel" type="Label" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -45.0
+offset_top = -11.5
+offset_right = 45.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 0.95, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 36
 text = "МЕХАНИКА"
 
 [node name="LeftLabel" type="Label" parent="."]
-text = "МЕХА"
 visible = false
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 36
+text = "МЕХА"
 
 [node name="RightLabel" type="Label" parent="."]
-text = "НИКА"
 visible = false
-position = Vector2(36, 0)
+offset_left = 36.0
+offset_right = 36.0
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 36
+text = "НИКА"
 
 [node name="HurtArea" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HurtArea"]
+position = Vector2(0.5, 0.5)
 shape = SubResource("1")
-position = Vector2(40, -10)

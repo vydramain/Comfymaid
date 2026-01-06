@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://b0sssm0k3"]
+
+[ext_resource type="Script" path="res://scripts/boss_smoke.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/smough.png" id="2"]
+
+[sub_resource type="CircleShape2D" id="1"]
+radius = 14.0
+
+[node name="BossSmoke" type="Area2D"]
+script = ExtResource("1")
+collision_layer = 0
+collision_mask = 1
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = ExtResource("2")
+position = Vector2(0, -8)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1")
+position = Vector2(0, -8)

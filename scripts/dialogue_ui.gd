@@ -17,7 +17,7 @@ func _ready() -> void:
 	hide()
 	add_to_group("dialogue_ui")
 
-func start_dialogue(lines: Array) -> void:
+func start_dialogue(lines: Array[String]) -> void:
 	if lines.is_empty():
 		return
 	_lines = lines

@@ -6,7 +6,7 @@ const PLAYER_MAX_SPEED := 240.0
 const PLAYER_ACCELERATION := 2000.0
 const PLAYER_DECELERATION := 2500.0
 const PLAYER_GRAVITY := 1400.0
-const PLAYER_JUMP_VELOCITY := -480.0
+const PLAYER_JUMP_VELOCITY := -680.0
 const PLAYER_COYOTE_TIME := 0.12
 const PLAYER_JUMP_BUFFER_TIME := 0.12
 const PLAYER_MAX_FALL_SPEED := 900.0
@@ -15,7 +15,7 @@ const PLAYER_ATTACK_DURATION := 0.12
 const PLAYER_ATTACK_RADIUS := PLAYER_HEIGHT
 const PLAYER_ATTACK_LOCK_TIME := 0.08
 const PLAYER_IFRAME_DURATION := 0.4
-const PLAYER_HIT_FLASH_TIME := 0.15
+const PLAYER_HIT_FLASH_INTERVAL := 0.08
 const PLAYER_MAX_HP := 3
 
 const PLAYER_ANIM_FRAME_COUNT := 4
@@ -23,8 +23,8 @@ const PLAYER_ANIM_DURATION := 0.5
 const PLAYER_ATTACK_ANIM_DURATION := PLAYER_ATTACK_DURATION
 
 const CAMERA_DEADZONE := Vector2(120, 80)
-const CAMERA_EDGE_PADDING_X := 100.0
-const CAMERA_EDGE_PADDING_Y := 50.0
+const CAMERA_EDGE_PADDING_X := 50.0
+const CAMERA_EDGE_PADDING_Y := 25.0
 const CAMERA_HINT_OFFSET := Vector2(0, -120)
 const CAMERA_HINT_UP_TIME := 0.6
 const CAMERA_HINT_HOLD := 0.4
@@ -41,6 +41,8 @@ var _facing := 1
 var _movement_enabled := true
 var _hp := PLAYER_MAX_HP
 var _invuln := false
+var _flicker_id := 0
+var _base_modulate := Color(1, 1, 1)
 
 var _interactables: Array[Area2D] = []
 var _nearest: Area2D
@@ -57,6 +59,7 @@ var _hint_used := false
 func _ready() -> void:
 	add_to_group("player")
 	_hp = PLAYER_MAX_HP
+	_base_modulate = visual.modulate
 	if interaction_detector:
 		interaction_detector.area_entered.connect(_on_area_entered)
 		interaction_detector.area_exited.connect(_on_area_exited)
@@ -180,22 +183,38 @@ func take_hit(amount: int) -> void:
 	if _invuln:
 		return
 	_hp = max(_hp - amount, 0)
-	_flash_white()
 	_start_invuln()
 	if _hp <= 0 and GameDirector.instance:
 		GameDirector.instance.request_death_reset()
 
-func _flash_white() -> void:
-	if visual == null:
-		return
-	visual.modulate = Color(1.6, 1.6, 1.6)
-	var tween := create_tween()
-	tween.tween_property(visual, "modulate", Color(1, 1, 1), PLAYER_HIT_FLASH_TIME)
-
 func _start_invuln() -> void:
 	_invuln = true
+	_start_flicker()
 	await get_tree().create_timer(PLAYER_IFRAME_DURATION).timeout
 	_invuln = false
+	_stop_flicker()
+
+func _start_flicker() -> void:
+	if visual == null:
+		return
+	_flicker_id += 1
+	var current_id := _flicker_id
+	_flicker_loop(current_id)
+
+func _flicker_loop(flicker_id: int) -> void:
+	while _invuln and _flicker_id == flicker_id:
+		visual.modulate = Color(1.6, 1.6, 1.6)
+		await get_tree().create_timer(PLAYER_HIT_FLASH_INTERVAL).timeout
+		if not _invuln or _flicker_id != flicker_id:
+			break
+		visual.modulate = _base_modulate
+		await get_tree().create_timer(PLAYER_HIT_FLASH_INTERVAL).timeout
+
+func _stop_flicker() -> void:
+	if visual == null:
+		return
+	_flicker_id += 1
+	visual.modulate = _base_modulate
 
 func reset_state() -> void:
 	velocity = Vector2.ZERO
