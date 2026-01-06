@@ -18,7 +18,13 @@ const PLAYER_IFRAME_DURATION := 0.4
 const PLAYER_HIT_FLASH_TIME := 0.15
 const PLAYER_MAX_HP := 3
 
+const PLAYER_ANIM_FRAME_COUNT := 4
+const PLAYER_ANIM_DURATION := 0.5
+const PLAYER_ATTACK_ANIM_DURATION := PLAYER_ATTACK_DURATION
+
 const CAMERA_DEADZONE := Vector2(120, 80)
+const CAMERA_EDGE_PADDING_X := 100.0
+const CAMERA_EDGE_PADDING_Y := 50.0
 const CAMERA_HINT_OFFSET := Vector2(0, -120)
 const CAMERA_HINT_UP_TIME := 0.6
 const CAMERA_HINT_HOLD := 0.4
@@ -30,6 +36,7 @@ var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
 var _attack_timer := 0.0
 var _attack_lock_timer := 0.0
+var _attack_anim_timer := 0.0
 var _facing := 1
 var _movement_enabled := true
 var _hp := PLAYER_MAX_HP
@@ -44,6 +51,8 @@ var _hint_used := false
 @onready var visual: Node2D = $Visual
 @onready var interaction_detector: Area2D = $InteractionDetector
 @onready var camera: Camera2D = $Camera2D
+@onready var sprite: AnimatedSprite2D = $Visual/Sprite
+@onready var hint_marker: Marker2D = $HintMarker
 
 func _ready() -> void:
 	add_to_group("player")
@@ -58,6 +67,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_interaction_prompt()
 	_update_camera(delta)
+	_update_animation(delta)
 
 func _physics_process(delta: float) -> void:
 	if not _movement_enabled:
@@ -119,6 +129,8 @@ func _handle_attack(delta: float) -> void:
 	if Input.is_action_just_pressed("attack") and _attack_timer == 0.0:
 		_attack_timer = PLAYER_ATTACK_COOLDOWN
 		_attack_lock_timer = PLAYER_ATTACK_LOCK_TIME
+		_attack_anim_timer = PLAYER_ATTACK_ANIM_DURATION
+		_play_animation("attack")
 		_spawn_attack_hitbox()
 
 func _spawn_attack_hitbox() -> void:
@@ -191,6 +203,7 @@ func reset_state() -> void:
 	_jump_buffer_timer = 0.0
 	_attack_timer = 0.0
 	_attack_lock_timer = 0.0
+	_attack_anim_timer = 0.0
 	_movement_enabled = true
 	_hp = PLAYER_MAX_HP
 	_invuln = false
@@ -236,7 +249,10 @@ func _show_prompt(interactable: Area2D) -> void:
 	var text := "△ Interact"
 	if interactable.has_method("get_prompt_text"):
 		text = interactable.get_prompt_text()
-	GameDirector.instance.prompt_ui.show_prompt(text, interactable.global_position + INTERACT_PROMPT_OFFSET)
+	var prompt_pos := global_position
+	if hint_marker:
+		prompt_pos = hint_marker.global_position
+	GameDirector.instance.prompt_ui.show_prompt(text, prompt_pos + INTERACT_PROMPT_OFFSET)
 
 func _clear_prompt() -> void:
 	if GameDirector.instance == null or GameDirector.instance.prompt_ui == null:
@@ -248,10 +264,15 @@ func _update_camera(delta: float) -> void:
 		return
 	var target_pos: Vector2 = camera.global_position
 	var player_pos: Vector2 = global_position
-	var left := target_pos.x - CAMERA_DEADZONE.x * 0.5
-	var right := target_pos.x + CAMERA_DEADZONE.x * 0.5
-	var top := target_pos.y - CAMERA_DEADZONE.y * 0.5
-	var bottom := target_pos.y + CAMERA_DEADZONE.y * 0.5
+	var view_size := camera.get_viewport_rect().size / camera.zoom
+	var deadzone := Vector2(
+		max(view_size.x - CAMERA_EDGE_PADDING_X * 2.0, 0.0),
+		max(view_size.y - CAMERA_EDGE_PADDING_Y * 2.0, 0.0)
+	)
+	var left := target_pos.x - deadzone.x * 0.5
+	var right := target_pos.x + deadzone.x * 0.5
+	var top := target_pos.y - deadzone.y * 0.5
+	var bottom := target_pos.y + deadzone.y * 0.5
 
 	if player_pos.x < left:
 		target_pos.x = player_pos.x + CAMERA_DEADZONE.x * 0.5
@@ -262,10 +283,39 @@ func _update_camera(delta: float) -> void:
 	elif player_pos.y > bottom:
 		target_pos.y = player_pos.y - CAMERA_DEADZONE.y * 0.5
 
-	target_pos.x = clamp(target_pos.x, _bounds_rect.position.x + CAMERA_DEADZONE.x * 0.5, _bounds_rect.position.x + _bounds_rect.size.x - CAMERA_DEADZONE.x * 0.5)
-	target_pos.y = clamp(target_pos.y, _bounds_rect.position.y + CAMERA_DEADZONE.y * 0.5, _bounds_rect.position.y + _bounds_rect.size.y - CAMERA_DEADZONE.y * 0.5)
+	var view_half := view_size * 0.5
+	var min_x := _bounds_rect.position.x + view_half.x
+	var max_x := _bounds_rect.position.x + _bounds_rect.size.x - view_half.x
+	var min_y := _bounds_rect.position.y + view_half.y
+	var max_y := _bounds_rect.position.y + _bounds_rect.size.y - view_half.y
+	if min_x > max_x:
+		min_x = _bounds_rect.position.x + _bounds_rect.size.x * 0.5
+		max_x = min_x
+	if min_y > max_y:
+		min_y = _bounds_rect.position.y + _bounds_rect.size.y * 0.5
+		max_y = min_y
+	target_pos.x = clamp(target_pos.x, min_x, max_x)
+	target_pos.y = clamp(target_pos.y, min_y, max_y)
 
 	camera.global_position = camera.global_position.lerp(target_pos, 6.0 * delta)
+
+func _update_animation(delta: float) -> void:
+	if sprite == null:
+		return
+	if _attack_anim_timer > 0.0:
+		_attack_anim_timer = max(_attack_anim_timer - delta, 0.0)
+		if sprite.animation != "attack":
+			_play_animation("attack")
+		return
+	if abs(velocity.x) > 5.0 and is_on_floor():
+		_play_animation("run")
+	else:
+		_play_animation("idle")
+
+func _play_animation(name: StringName) -> void:
+	if sprite == null or sprite.animation == name:
+		return
+	sprite.play(name)
 
 func trigger_hint_up() -> void:
 	if camera == null or _hint_used:
@@ -291,4 +341,4 @@ func _update_camera_bounds() -> void:
 		var rect_node := bounds.get_node("BoundsRect")
 		if rect_node is ReferenceRect:
 			var rect := rect_node as ReferenceRect
-			_bounds_rect = Rect2(rect.global_position, rect.size)
+			_bounds_rect = rect.get_global_rect()

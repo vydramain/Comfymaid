@@ -4,17 +4,17 @@
 [ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="2"]
 
 [sub_resource type="RectangleShape2D" id="1"]
-size = Vector2(960, 40)
+size = Vector2(1500, 40)
 
 [node name="Hub" type="Node2D"]
 
 [node name="CameraBounds" type="Node2D" parent="."]
 
 [node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
-offset_left = -480.0
+offset_left = -800.0
 offset_top = -260.0
-offset_right = 480.0
-offset_bottom = 280.0
+offset_right = 800.0
+offset_bottom = 323.0
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
 position = Vector2(0, 141)
@@ -26,16 +26,16 @@ position = Vector2(0, 260)
 shape = SubResource("1")
 
 [node name="FloorVisual" type="ColorRect" parent="Floor"]
-offset_left = -480.0
+offset_left = -750.0
 offset_top = 240.0
-offset_right = 480.0
-offset_bottom = 280.0
+offset_right = 750.0
+offset_bottom = 323.0
 color = Color(0.15, 0.15, 0.2, 1)
 
 [node name="Guardian" parent="." instance=ExtResource("1")]
-position = Vector2(-461, 236)
+position = Vector2(-726, 240)
 
 [node name="DescentDoor" parent="." instance=ExtResource("2")]
-position = Vector2(451, 199)
+position = Vector2(720, 200)
 target_scene = "BossRoom"
 requires_guardian_intro = true

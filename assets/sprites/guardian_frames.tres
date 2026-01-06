@@ -1,0 +1,52 @@
+[gd_resource type="SpriteFrames" load_steps=8 format=3 uid="uid://dyctb0ry7g58o"]
+
+[ext_resource type="Texture2D" uid="uid://coym1w3m7imh6" path="res://assets/sprites/guardian_playing.png" id="1"]
+[ext_resource type="Texture2D" uid="uid://dtqlocctxcveg" path="res://assets/sprites/guardian_idle.png" id="2"]
+
+[sub_resource type="AtlasTexture" id="5"]
+atlas = ExtResource("2")
+region = Rect2(0, 0, 48, 48)
+
+[sub_resource type="AtlasTexture" id="1"]
+atlas = ExtResource("1")
+region = Rect2(0, 0, 48, 48)
+
+[sub_resource type="AtlasTexture" id="2"]
+atlas = ExtResource("1")
+region = Rect2(48, 0, 48, 48)
+
+[sub_resource type="AtlasTexture" id="3"]
+atlas = ExtResource("1")
+region = Rect2(96, 0, 48, 48)
+
+[sub_resource type="AtlasTexture" id="4"]
+atlas = ExtResource("1")
+region = Rect2(144, 0, 48, 48)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("5")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 0.5
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("1")
+}, {
+"duration": 1.0,
+"texture": SubResource("2")
+}, {
+"duration": 1.0,
+"texture": SubResource("3")
+}, {
+"duration": 1.0,
+"texture": SubResource("4")
+}],
+"loop": true,
+"name": &"playing",
+"speed": 0.5
+}]
