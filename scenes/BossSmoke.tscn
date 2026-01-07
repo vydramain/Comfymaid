@@ -1,20 +1,27 @@
-[gd_scene load_steps=3 format=3 uid="uid://b0sssm0k3"]
+[gd_scene load_steps=6 format=3 uid="uid://b7pa26u8qxunc"]
 
-[ext_resource type="Script" path="res://scripts/boss_smoke.gd" id="1"]
-[ext_resource type="Texture2D" path="res://assets/sprites/smough.png" id="2"]
+[ext_resource type="Script" uid="uid://ccdqeqqixvoin" path="res://scripts/smoke_hitbox.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://c2gedajushgkr" path="res://assets/sprites/smough.png" id="2"]
+[ext_resource type="Shader" uid="uid://cjdhuccooujdi" path="res://shaders/smoke_dissolve.gdshader" id="3"]
 
-[sub_resource type="CircleShape2D" id="1"]
-radius = 14.0
+[sub_resource type="ShaderMaterial" id="2"]
+shader = ExtResource("3")
+shader_parameter/reveal = 0.0
+shader_parameter/pixel_size = 2.0
 
-[node name="BossSmoke" type="Area2D"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(32, 32)
+
+[node name="BossSmoke" type="Node2D"]
 script = ExtResource("1")
-collision_layer = 0
-collision_mask = 1
 
 [node name="Sprite" type="Sprite2D" parent="."]
+texture_filter = 1
+material = SubResource("2")
 texture = ExtResource("2")
-position = Vector2(0, -8)
+flip_h = true
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("1")
-position = Vector2(0, -8)
+[node name="HurtArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtArea"]
+shape = SubResource("RectangleShape2D_1")
