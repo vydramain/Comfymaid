@@ -29,6 +29,9 @@ var overlay_ui: Node
 var whiteout_ui: Node
 var _scene_manager_connected := false
 var _dialogue_connected := false
+var _dialogue_source: Node
+var _ui_manager: Node
+var _ui_manager_connected := false
 var _last_input_type := InputType.KEYBOARD
 var _last_joypad_device_id := -1
 var _last_joypad_name := ""
@@ -44,8 +47,8 @@ func _ready() -> void:
 	if _ui_config == null:
 		_ui_config = input_ui_config.new()
 	_setup_input_handlers()
-	_resolve_ui()
-	_connect_dialogue()
+	_bind_ui_manager()
+	get_tree().node_added.connect(_on_node_added)
 	if SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
 		_scene_manager_connected = true
@@ -63,8 +66,6 @@ func _exit_tree() -> void:
 		instance = null
 
 func _process(_delta: float) -> void:
-	if dialogue_ui == null or prompt_ui == null or overlay_ui == null or whiteout_ui == null:
-		_resolve_ui()
 	if not _scene_manager_connected and SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
 		_scene_manager_connected = true
@@ -86,19 +87,53 @@ func _get_player() -> Node:
 		return SceneManager.instance.player
 	return null
 
-func _resolve_ui() -> void:
-	dialogue_ui = get_tree().get_first_node_in_group("dialogue_ui")
-	prompt_ui = get_tree().get_first_node_in_group("prompt_ui")
-	overlay_ui = get_tree().get_first_node_in_group("overlay_ui")
-	whiteout_ui = get_tree().get_first_node_in_group("whiteout_ui")
-	_connect_dialogue()
+func _bind_ui_manager() -> void:
+	var ui_manager := _get_ui_manager()
+	if ui_manager == null or ui_manager == _ui_manager:
+		return
+	_ui_manager = ui_manager
+	if not _ui_manager_connected:
+		_ui_manager.ui_ready.connect(_on_ui_ready)
+		_ui_manager_connected = true
+	_ui_manager.request_ui_ready()
+
+func _get_ui_manager() -> Node:
+	return get_tree().get_first_node_in_group("ui_manager")
+
+func _on_node_added(node: Node) -> void:
+	if node.is_in_group("ui_manager"):
+		_bind_ui_manager()
 
 func _connect_dialogue() -> void:
-	if _dialogue_connected or dialogue_ui == null:
+	if dialogue_ui == null:
+		return
+	if _dialogue_connected and _dialogue_source == dialogue_ui:
 		return
 	dialogue_ui.dialogue_started.connect(_on_dialogue_started)
 	dialogue_ui.dialogue_finished.connect(_on_dialogue_finished)
 	_dialogue_connected = true
+	_dialogue_source = dialogue_ui
+
+func _disconnect_dialogue() -> void:
+	if not _dialogue_connected or _dialogue_source == null:
+		return
+	if is_instance_valid(_dialogue_source):
+		if _dialogue_source.dialogue_started.is_connected(_on_dialogue_started):
+			_dialogue_source.dialogue_started.disconnect(_on_dialogue_started)
+		if _dialogue_source.dialogue_finished.is_connected(_on_dialogue_finished):
+			_dialogue_source.dialogue_finished.disconnect(_on_dialogue_finished)
+	_dialogue_connected = false
+	_dialogue_source = null
+
+func _on_ui_ready(next_dialogue: Node, next_prompt: Node, next_overlay: Node, next_whiteout: Node) -> void:
+	var dialogue_changed := next_dialogue != dialogue_ui
+	dialogue_ui = next_dialogue
+	prompt_ui = next_prompt
+	overlay_ui = next_overlay
+	whiteout_ui = next_whiteout
+	if dialogue_changed:
+		_disconnect_dialogue()
+		_connect_dialogue()
 
 func _on_dialogue_started() -> void:
 	var player := _get_player()
