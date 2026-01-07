@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3 uid="uid://cpxq8yckom11q"]
+[gd_scene load_steps=11 format=3 uid="uid://cpxq8yckom11q"]
 
 [ext_resource type="Script" uid="uid://dxsnd6m2icvyt" path="res://scripts/boss.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://dgkj7s6namp0a" path="res://assets/sprites/kruglic_idle.png" id="2"]
 [ext_resource type="Texture2D" uid="uid://b6eexbtqktms7" path="res://assets/sprites/kruglic_run.png" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/BossSmoke.tscn" id="4"]
+[ext_resource type="Resource" path="res://scripts/config/boss_config.tres" id="5"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_gw42l"]
 size = Vector2(50, 80)
@@ -142,6 +143,7 @@ size = Vector2(110, 120)
 [node name="Boss" type="CharacterBody2D"]
 script = ExtResource("1")
 smoke_scene = ExtResource("4")
+config = ExtResource("5")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -24)

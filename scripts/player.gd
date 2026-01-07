@@ -1,36 +1,6 @@
 extends CharacterBody2D
 
-const PLAYER_WIDTH := 16.0
-const PLAYER_HEIGHT := 32.0
-const PLAYER_MAX_SPEED := 240.0
-const PLAYER_ACCELERATION := 2000.0
-const PLAYER_DECELERATION := 2500.0
-const PLAYER_GRAVITY := 1400.0
-const PLAYER_JUMP_VELOCITY := -680.0
-const PLAYER_COYOTE_TIME := 0.12
-const PLAYER_JUMP_BUFFER_TIME := 0.12
-const PLAYER_MAX_FALL_SPEED := 900.0
-const PLAYER_ATTACK_COOLDOWN := 0.35
-const PLAYER_ATTACK_DURATION := 0.12
-const PLAYER_ATTACK_RADIUS := PLAYER_HEIGHT
-const PLAYER_ATTACK_LOCK_TIME := 0.08
-const PLAYER_IFRAME_DURATION := 0.4
-const PLAYER_HIT_FLASH_INTERVAL := 0.08
-const PLAYER_MAX_HP := 3
-
-const PLAYER_ANIM_FRAME_COUNT := 4
-const PLAYER_ANIM_DURATION := 0.5
-const PLAYER_ATTACK_ANIM_DURATION := PLAYER_ATTACK_DURATION
-
-const CAMERA_DEADZONE := Vector2(120, 80)
-const CAMERA_EDGE_PADDING_X := 50.0
-const CAMERA_EDGE_PADDING_Y := 25.0
-const CAMERA_HINT_OFFSET := Vector2(0, -120)
-const CAMERA_HINT_UP_TIME := 0.6
-const CAMERA_HINT_HOLD := 0.4
-const CAMERA_HINT_DOWN_TIME := 0.6
-
-const INTERACT_PROMPT_OFFSET := Vector2(0, -24)
+@export var config: player_config
 
 var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
@@ -39,7 +9,7 @@ var _attack_lock_timer := 0.0
 var _attack_anim_timer := 0.0
 var _facing := 1
 var _movement_enabled := true
-var _hp := PLAYER_MAX_HP
+var _hp := 0
 var _invuln := false
 var _flicker_id := 0
 var _base_modulate := Color(1, 1, 1)
@@ -49,6 +19,7 @@ var _nearest: Area2D
 
 var _bounds_rect := Rect2(Vector2.ZERO, Vector2(1024, 600))
 var _hint_used := false
+var _config: player_config
 
 @onready var visual: Node2D = $Visual
 @onready var interaction_detector: Area2D = $InteractionDetector
@@ -57,8 +28,9 @@ var _hint_used := false
 @onready var hint_marker: Marker2D = $HintMarker
 
 func _ready() -> void:
+	_config = config if config else player_config.new()
 	add_to_group("player")
-	_hp = PLAYER_MAX_HP
+	_hp = _config.max_hp
 	_base_modulate = visual.modulate
 	if interaction_detector:
 		interaction_detector.area_entered.connect(_on_area_entered)
@@ -74,7 +46,7 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if not _movement_enabled:
-		velocity.x = move_toward(velocity.x, 0.0, PLAYER_DECELERATION * delta)
+		velocity.x = move_toward(velocity.x, 0.0, _config.deceleration * delta)
 		_apply_gravity(delta)
 		move_and_slide()
 		return
@@ -95,20 +67,20 @@ func _physics_process(delta: float) -> void:
 func _handle_horizontal(delta: float) -> void:
 	var input_axis := Input.get_axis("move_left", "move_right")
 	if abs(input_axis) > 0.0:
-		velocity.x = move_toward(velocity.x, input_axis * PLAYER_MAX_SPEED, PLAYER_ACCELERATION * delta)
+		velocity.x = move_toward(velocity.x, input_axis * _config.max_speed, _config.acceleration * delta)
 		_facing = 1 if input_axis > 0.0 else -1
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, PLAYER_DECELERATION * delta)
+		velocity.x = move_toward(velocity.x, 0.0, _config.deceleration * delta)
 
 func _apply_gravity(delta: float) -> void:
-	velocity.y += PLAYER_GRAVITY * delta
-	if velocity.y > PLAYER_MAX_FALL_SPEED:
-		velocity.y = PLAYER_MAX_FALL_SPEED
+	velocity.y += _config.gravity * delta
+	if velocity.y > _config.max_fall_speed:
+		velocity.y = _config.max_fall_speed
 
 func _handle_jump() -> void:
 	var can_jump := is_on_floor() or _coyote_timer > 0.0
 	if _jump_buffer_timer > 0.0 and can_jump:
-		velocity.y = PLAYER_JUMP_VELOCITY
+		velocity.y = _config.jump_velocity
 		_jump_buffer_timer = 0.0
 		_coyote_timer = 0.0
 
@@ -118,11 +90,11 @@ func _apply_variable_jump() -> void:
 
 func _handle_input_buffering(delta: float) -> void:
 	if Input.is_action_just_pressed("jump"):
-		_jump_buffer_timer = PLAYER_JUMP_BUFFER_TIME
+		_jump_buffer_timer = _config.jump_buffer_time
 	elif _jump_buffer_timer > 0.0:
 		_jump_buffer_timer = max(_jump_buffer_timer - delta, 0.0)
 	if is_on_floor():
-		_coyote_timer = PLAYER_COYOTE_TIME
+		_coyote_timer = _config.coyote_time
 	elif _coyote_timer > 0.0:
 		_coyote_timer = max(_coyote_timer - delta, 0.0)
 
@@ -130,20 +102,20 @@ func _handle_attack(delta: float) -> void:
 	if _attack_timer > 0.0:
 		_attack_timer = max(_attack_timer - delta, 0.0)
 	if Input.is_action_just_pressed("attack") and _attack_timer == 0.0:
-		_attack_timer = PLAYER_ATTACK_COOLDOWN
-		_attack_lock_timer = PLAYER_ATTACK_LOCK_TIME
-		_attack_anim_timer = PLAYER_ATTACK_ANIM_DURATION
+		_attack_timer = _config.attack_cooldown
+		_attack_lock_timer = _config.attack_lock_time
+		_attack_anim_timer = _config.attack_anim_duration
 		_play_animation("attack")
 		_spawn_attack_hitbox()
 
 func _spawn_attack_hitbox() -> void:
 	var hitbox := Area2D.new()
 	var shape := CollisionPolygon2D.new()
-	var polygon := _make_semicircle(PLAYER_ATTACK_RADIUS)
+	var polygon := _make_semicircle(_config.attack_radius)
 	shape.polygon = polygon
 	hitbox.add_child(shape)
-	# hitbox.position = Vector2(PLAYER_ATTACK_RADIUS * _facing, -4)
-	hitbox.position.x = (_facing * (PLAYER_WIDTH * 0.5 + PLAYER_ATTACK_RADIUS * 0.1))
+	# hitbox.position = Vector2(_config.attack_radius * _facing, -4)
+	hitbox.position.x = (_facing * (_config.width * 0.5 + _config.attack_radius * 0.1))
 	hitbox.scale.x = _facing
 	hitbox.monitoring = true
 	hitbox.collision_layer = 0
@@ -151,7 +123,7 @@ func _spawn_attack_hitbox() -> void:
 	add_child(hitbox)
 	hitbox.body_entered.connect(_on_attack_hit)
 	hitbox.area_entered.connect(_on_attack_hit)
-	get_tree().create_timer(PLAYER_ATTACK_DURATION).timeout.connect(hitbox.queue_free)
+	get_tree().create_timer(_config.attack_duration).timeout.connect(hitbox.queue_free)
 
 func _make_semicircle(radius: float) -> PackedVector2Array:
 	var points := PackedVector2Array()
@@ -190,7 +162,7 @@ func take_hit(amount: int) -> void:
 func _start_invuln() -> void:
 	_invuln = true
 	_start_flicker()
-	await get_tree().create_timer(PLAYER_IFRAME_DURATION).timeout
+	await get_tree().create_timer(_config.iframe_duration).timeout
 	_invuln = false
 	_stop_flicker()
 
@@ -204,11 +176,11 @@ func _start_flicker() -> void:
 func _flicker_loop(flicker_id: int) -> void:
 	while _invuln and _flicker_id == flicker_id:
 		visual.modulate = Color(1.6, 1.6, 1.6)
-		await get_tree().create_timer(PLAYER_HIT_FLASH_INTERVAL).timeout
+		await get_tree().create_timer(_config.hit_flash_interval).timeout
 		if not _invuln or _flicker_id != flicker_id:
 			break
 		visual.modulate = _base_modulate
-		await get_tree().create_timer(PLAYER_HIT_FLASH_INTERVAL).timeout
+		await get_tree().create_timer(_config.hit_flash_interval).timeout
 
 func _stop_flicker() -> void:
 	if visual == null:
@@ -224,7 +196,7 @@ func reset_state() -> void:
 	_attack_lock_timer = 0.0
 	_attack_anim_timer = 0.0
 	_movement_enabled = true
-	_hp = PLAYER_MAX_HP
+	_hp = _config.max_hp
 	_invuln = false
 
 func try_interact() -> void:
@@ -271,7 +243,7 @@ func _show_prompt(interactable: Area2D) -> void:
 	var prompt_pos := global_position
 	if hint_marker:
 		prompt_pos = hint_marker.global_position
-	GameDirector.instance.prompt_ui.show_prompt(text, prompt_pos + INTERACT_PROMPT_OFFSET)
+	GameDirector.instance.prompt_ui.show_prompt(text, prompt_pos + _config.interact_prompt_offset)
 
 func _clear_prompt() -> void:
 	if GameDirector.instance == null or GameDirector.instance.prompt_ui == null:
@@ -285,8 +257,8 @@ func _update_camera(delta: float) -> void:
 	var player_pos: Vector2 = global_position
 	var view_size := camera.get_viewport_rect().size / camera.zoom
 	var deadzone := Vector2(
-		max(view_size.x - CAMERA_EDGE_PADDING_X * 2.0, 0.0),
-		max(view_size.y - CAMERA_EDGE_PADDING_Y * 2.0, 0.0)
+		max(view_size.x - _config.camera_edge_padding_x * 2.0, 0.0),
+		max(view_size.y - _config.camera_edge_padding_y * 2.0, 0.0)
 	)
 	var left := target_pos.x - deadzone.x * 0.5
 	var right := target_pos.x + deadzone.x * 0.5
@@ -294,13 +266,13 @@ func _update_camera(delta: float) -> void:
 	var bottom := target_pos.y + deadzone.y * 0.5
 
 	if player_pos.x < left:
-		target_pos.x = player_pos.x + CAMERA_DEADZONE.x * 0.5
+		target_pos.x = player_pos.x + _config.camera_deadzone.x * 0.5
 	elif player_pos.x > right:
-		target_pos.x = player_pos.x - CAMERA_DEADZONE.x * 0.5
+		target_pos.x = player_pos.x - _config.camera_deadzone.x * 0.5
 	if player_pos.y < top:
-		target_pos.y = player_pos.y + CAMERA_DEADZONE.y * 0.5
+		target_pos.y = player_pos.y + _config.camera_deadzone.y * 0.5
 	elif player_pos.y > bottom:
-		target_pos.y = player_pos.y - CAMERA_DEADZONE.y * 0.5
+		target_pos.y = player_pos.y - _config.camera_deadzone.y * 0.5
 
 	var view_half := view_size * 0.5
 	var min_x := _bounds_rect.position.x + view_half.x
@@ -342,9 +314,9 @@ func trigger_hint_up() -> void:
 	_hint_used = true
 	var original := camera.global_position
 	var tween := create_tween()
-	tween.tween_property(camera, "global_position", original + CAMERA_HINT_OFFSET, CAMERA_HINT_UP_TIME).set_trans(Tween.TRANS_SINE)
-	tween.tween_interval(CAMERA_HINT_HOLD)
-	tween.tween_property(camera, "global_position", original, CAMERA_HINT_DOWN_TIME).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(camera, "global_position", original + _config.camera_hint_offset, _config.camera_hint_up_time).set_trans(Tween.TRANS_SINE)
+	tween.tween_interval(_config.camera_hint_hold)
+	tween.tween_property(camera, "global_position", original, _config.camera_hint_down_time).set_trans(Tween.TRANS_SINE)
 
 func _on_level_changed(_scene_name: StringName) -> void:
 	_hint_used = false

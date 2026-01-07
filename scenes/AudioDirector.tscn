@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3 uid="uid://d2r5m1knhx8pf"]
+
+[ext_resource type="Script" path="res://scripts/audio_director.gd" id="1"]
+[ext_resource type="Resource" path="res://scripts/config/audio_config.tres" id="2"]
+
+[node name="AudioDirector" type="Node"]
+script = ExtResource("1")
+config = ExtResource("2")
