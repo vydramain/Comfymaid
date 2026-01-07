@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://cpxq8xcwol1wq"]
 
 [ext_resource type="PackedScene" uid="uid://cpxq8yckom11q" path="res://scenes/Boss.tscn" id="1"]
-[ext_resource type="Texture2D" path="res://assets/sprites/cave_back.png" id="1_5g46w"]
+[ext_resource type="Texture2D" uid="uid://7kykclyblehj" path="res://assets/sprites/cave_back.png" id="1_5g46w"]
 [ext_resource type="PackedScene" uid="uid://bjdu056pv45ik" path="res://scenes/MechanicWord.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://5lymwsiiobny" path="res://scenes/Door.tscn" id="3"]
 
@@ -117,9 +117,9 @@ color = Color(0.2, 0.2, 0.25, 1)
 position = Vector2(755, 201)
 
 [node name="MechanicWord" parent="." instance=ExtResource("2")]
-z_index = 0
-z_as_relative = true
 position = Vector2(-3, -206)
+start_visible = true
+enable_on_boss_revive = false
 
 [node name="ExitDoor" parent="." instance=ExtResource("3")]
 position = Vector2(-841, 200)
