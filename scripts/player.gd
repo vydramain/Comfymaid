@@ -331,10 +331,10 @@ func _update_animation(delta: float) -> void:
 	else:
 		_play_animation("idle")
 
-func _play_animation(name: StringName) -> void:
-	if sprite == null or sprite.animation == name:
+func _play_animation(anim_name: StringName) -> void:
+	if sprite == null or sprite.animation == anim_name:
 		return
-	sprite.play(name)
+	sprite.play(anim_name)
 
 func trigger_hint_up() -> void:
 	if camera == null or _hint_used:

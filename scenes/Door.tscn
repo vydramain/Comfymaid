@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://5lymwsiiobny"]
 
 [ext_resource type="Script" uid="uid://bp23ffhsiwxxs" path="res://scripts/interactable.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://dv5uckcrxunx2" path="res://assets/sprites/gate_closed.png" id="2_eyv6f"]
-[ext_resource type="Texture2D" uid="uid://dk62tt6wuj3x8" path="res://assets/sprites/gate_open.png" id="3_6bq1w"]
+[ext_resource type="Texture2D" path="res://assets/sprites/gate_closed.png" id="2_eyv6f"]
+[ext_resource type="Texture2D" path="res://assets/sprites/gate_open.png" id="3_6bq1w"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(60, 80)

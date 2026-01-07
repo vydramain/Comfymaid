@@ -5,7 +5,7 @@ signal boundary_reached(scene_name: StringName)
 static var instance: Node
 
 const SEGMENT_FALLBACK_LENGTH := 4.0
-const HUB_LAYER_MAX_DISTANCE := 840.0
+const HUB_LAYER_MAX_DISTANCE := 1200.0
 const HUB_LAYER_BASE_DB := -8.0
 const HUB_LAYER_SILENT_DB := -80.0
 const HUB_LAYER2_MIN_DB := -26.0

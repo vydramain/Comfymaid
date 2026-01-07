@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://cpxq8xcwol1wq"]
 
 [ext_resource type="PackedScene" uid="uid://cpxq8yckom11q" path="res://scenes/Boss.tscn" id="1"]
-[ext_resource type="Texture2D" uid="uid://7kykclyblehj" path="res://assets/sprites/cave_back.png" id="1_5g46w"]
+[ext_resource type="Texture2D" path="res://assets/sprites/cave_back.png" id="1_5g46w"]
 [ext_resource type="PackedScene" uid="uid://bjdu056pv45ik" path="res://scenes/MechanicWord.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://5lymwsiiobny" path="res://scenes/Door.tscn" id="3"]
 

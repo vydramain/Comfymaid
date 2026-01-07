@@ -9,14 +9,14 @@ var player: CharacterBody2D
 @onready var boss_label: Label = %BossLabel
 
 func _ready() -> void:
-    set_process(true)
-    var manager := SceneManager.instance
-    if manager:
-        manager.level_changed.connect(_on_level_changed)
-        manager.player_spawned.connect(_on_player_spawned)
-        _on_level_changed(manager.current_scene_name)
-        if manager.player:
-            _on_player_spawned(manager.player)
+	set_process(true)
+	var manager := SceneManager.instance
+	if manager:
+		manager.level_changed.connect(_on_level_changed)
+		manager.player_spawned.connect(_on_player_spawned)
+		_on_level_changed(manager.current_scene_name)
+		if manager.player:
+			_on_player_spawned(manager.player)
 
 func _process(_delta: float) -> void:
 	if player and is_instance_valid(player):
@@ -35,7 +35,7 @@ func _update_audio_labels() -> void:
 		audio_label.text = "Audio: --"
 		boss_label.text = "Boss: --"
 		return
-	var state := AudioDirector.instance.get_debug_state()
+	var state: Dictionary = AudioDirector.instance.get_debug_state()
 	audio_label.text = "Audio: scene=%s next=%.2f len=%.2f" % [
 		state.get("scene", ""),
 		state.get("time_to_next_boundary", 0.0),
@@ -51,8 +51,8 @@ func _update_audio_labels() -> void:
 	]
 
 func _on_level_changed(scene_name: StringName) -> void:
-    scene_label.text = "Scene: %s" % scene_name
+	scene_label.text = "Scene: %s" % scene_name
 
 func _on_player_spawned(new_player: Node) -> void:
-    if new_player is CharacterBody2D:
-        player = new_player
+	if new_player is CharacterBody2D:
+		player = new_player

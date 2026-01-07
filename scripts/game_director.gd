@@ -144,9 +144,9 @@ func request_scene_change(scene_name: StringName, spawn_marker: StringName = "Pl
 		_set_player_movement(true)
 		return
 	var fade_time: float = WHITEOUT_FADE_MAX
-	var start_boundary_id := -1
+	var _start_boundary_id := -1
 	if AudioDirector.instance:
-		start_boundary_id = AudioDirector.instance.get_boundary_id()
+		_start_boundary_id = AudioDirector.instance.get_boundary_id()
 		AudioDirector.instance.fade_out_all(fade_time)
 	await whiteout_ui.fade_to_white(fade_time)
 	if AudioDirector.instance:
@@ -192,6 +192,11 @@ func notify_boss_revive() -> void:
 		boss_revived_once = true
 		if overlay_ui and overlay_ui.has_method("show_line"):
 			overlay_ui.show_line("Советы по игре будут?")
+		var root := SceneManager.instance.current_level if SceneManager.instance else null
+		if root:
+			var mechanic := root.get_node_or_null("MechanicWord")
+			if mechanic and mechanic.has_method("enable_word"):
+				mechanic.enable_word()
 
 func notify_boss_defeated() -> void:
 	boss_defeated = true

@@ -103,9 +103,9 @@ func _update_visual_state() -> void:
 		sprite.modulate = GUARDIAN_IDLE_COLOR
 		_play_animation("playing")
 
-func _play_animation(name: StringName) -> void:
+func _play_animation(anim_name: StringName) -> void:
 	if anim_player == null:
 		return
-	if anim_player.current_animation == name:
+	if anim_player.current_animation == anim_name:
 		return
-	anim_player.play(name)
+	anim_player.play(anim_name)
