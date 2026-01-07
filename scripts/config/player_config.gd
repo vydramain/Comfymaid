@@ -21,6 +21,8 @@ class_name player_config
 @export var max_hp: int = 3
 @export var anim_frame_count: int = 4
 @export var anim_duration: float = 0.5
+@export var reset_hold_time: float = 0.5
+@export var allow_reset_in_release := false
 
 @export var camera_deadzone: Vector2 = Vector2(120, 80)
 @export var camera_edge_padding_x: float = 50.0
