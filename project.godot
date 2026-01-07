@@ -17,7 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-AudioDirector="*res://scripts/audio_director.gd"
+AudioDirector="*res://scenes/AudioDirector.tscn"
 GameDirector="*res://scripts/game_director.gd"
 
 [display]

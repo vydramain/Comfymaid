@@ -1,27 +1,17 @@
 extends CharacterBody2D
 
-const BOSS_MAX_HP := 5
-const BOSS_GRAVITY := 1400.0
-const BOSS_MAX_FALL_SPEED := 900.0
-const BOSS_IFRAME_DURATION := 0.3
-const BOSS_HIT_FLASH_INTERVAL := 0.08
-const BOSS_INVALID_DEATH_SHRINK_TIME := 0.3
-const BOSS_INVALID_DEATH_PAUSE := 0.5
-const BOSS_FINAL_DEATH_FADE_TIME := 0.4
-
+@export var config: boss_config
 @export var ai_enabled := true
-@export var move_speed := 120.0
-@export var acceleration := 800.0
-@export var stop_distance := 12.0
 @export var debug_boss := false
 @export var smoke_scene: PackedScene
 
-var _hp := BOSS_MAX_HP
+var _hp := 0
 var _invuln := false
 var _reviving := false
 var _facing := -1
 var _flicker_id := 0
 var _base_modulate := Color(1, 1, 1)
+var _config: boss_config
 
 @onready var damage_area: Area2D = $DamageArea
 @onready var anim_player: AnimationPlayer = $AnimationPlayer
@@ -30,7 +20,8 @@ var _base_modulate := Color(1, 1, 1)
 @onready var right_foot: Marker2D = $FootMarkers/RightFootMarker
 
 func _ready() -> void:
-	_hp = BOSS_MAX_HP
+	_config = config if config else boss_config.new()
+	_hp = _config.max_hp
 	if damage_area:
 		damage_area.body_entered.connect(_on_damage_body)
 	if sprite:
@@ -48,21 +39,21 @@ func _update_ai(delta: float) -> void:
 	if can_move and player:
 		var to_player := player.global_position - global_position
 		var dir_x: float = sign(to_player.x)
-		if abs(to_player.x) <= stop_distance:
+		if abs(to_player.x) <= _config.stop_distance:
 			dir_x = 0.0
 		if dir_x != 0.0:
 			_facing = int(dir_x)
-		var target_speed := float(dir_x) * move_speed
-		velocity.x = move_toward(velocity.x, target_speed, acceleration * delta)
+		var target_speed := float(dir_x) * _config.move_speed
+		velocity.x = move_toward(velocity.x, target_speed, _config.acceleration * delta)
 		_update_animation(abs(velocity.x) > 1.0)
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, acceleration * delta)
+		velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
 		_update_animation(false)
 
 func _apply_gravity(delta: float) -> void:
-	velocity.y += BOSS_GRAVITY * delta
-	if velocity.y > BOSS_MAX_FALL_SPEED:
-		velocity.y = BOSS_MAX_FALL_SPEED
+	velocity.y += _config.gravity * delta
+	if velocity.y > _config.max_fall_speed:
+		velocity.y = _config.max_fall_speed
 
 func _update_animation(moving: bool) -> void:
 	if anim_player == null:
@@ -104,10 +95,10 @@ func _invalid_death() -> void:
 	_reviving = true
 	_invuln = true
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector2(0.7, 0.7), BOSS_INVALID_DEATH_SHRINK_TIME)
-	tween.tween_interval(BOSS_INVALID_DEATH_PAUSE)
+	tween.tween_property(self, "scale", Vector2(0.7, 0.7), _config.invalid_death_shrink_time)
+	tween.tween_interval(_config.invalid_death_pause)
 	await tween.finished
-	_hp = BOSS_MAX_HP
+	_hp = _config.max_hp
 	scale = Vector2.ONE
 	_reviving = false
 	_invuln = false
@@ -123,7 +114,7 @@ func _final_death() -> void:
 	_invuln = true
 	_stop_flicker()
 	var tween := create_tween()
-	tween.tween_property(sprite, "modulate", Color(0.4, 0.4, 0.4), BOSS_FINAL_DEATH_FADE_TIME)
+	tween.tween_property(sprite, "modulate", Color(0.4, 0.4, 0.4), _config.final_death_fade_time)
 	await tween.finished
 	if AudioDirector.instance:
 		AudioDirector.instance.stop_boss_music()
@@ -145,7 +136,7 @@ func _trigger_camera_hint() -> void:
 func _start_invuln() -> void:
 	_invuln = true
 	_start_flicker()
-	await get_tree().create_timer(BOSS_IFRAME_DURATION).timeout
+	await get_tree().create_timer(_config.iframe_duration).timeout
 	_invuln = false
 	_stop_flicker()
 
@@ -159,11 +150,11 @@ func _start_flicker() -> void:
 func _flicker_loop(flicker_id: int) -> void:
 	while _invuln and _flicker_id == flicker_id:
 		sprite.modulate = Color(1.6, 1.6, 1.6)
-		await get_tree().create_timer(BOSS_HIT_FLASH_INTERVAL).timeout
+		await get_tree().create_timer(_config.hit_flash_interval).timeout
 		if not _invuln or _flicker_id != flicker_id:
 			break
 		sprite.modulate = _base_modulate
-		await get_tree().create_timer(BOSS_HIT_FLASH_INTERVAL).timeout
+		await get_tree().create_timer(_config.hit_flash_interval).timeout
 
 func _stop_flicker() -> void:
 	if sprite == null:

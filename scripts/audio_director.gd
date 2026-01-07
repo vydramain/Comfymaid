@@ -4,16 +4,6 @@ signal boundary_reached(scene_name: StringName)
 
 static var instance: Node
 
-const SEGMENT_FALLBACK_LENGTH := 4.0
-const HUB_LAYER_MAX_DISTANCE := 1200.0
-const HUB_LAYER_BASE_DB := -8.0
-const HUB_LAYER_SILENT_DB := -80.0
-const HUB_LAYER2_MIN_DB := -26.0
-const HUB_LAYER2_MAX_DB := -10.0
-const HUB_LAYER3_MIN_DB := -38.0
-const HUB_LAYER3_MAX_DB := -10.0
-const BOSS_LAYER_DB := -6.0
-
 const HUB_LAYER1_INTRO_PATH := "res://assets/music/hub_layer_1_intro.mp3"
 const HUB_LAYER1_BASE_PATH := "res://assets/music/hub_layer_1_base.mp3"
 const HUB_LAYER2_BASE_PATH := "res://assets/music/hub_layer_2_base.mp3"
@@ -30,6 +20,8 @@ const BOSS_LAYER2_BASE_PATHS := [
 	"res://assets/music/bossroom_layer_2_base_2.mp3",
 	"res://assets/music/bossroom_layer_2_base_3.mp3",
 ]
+
+@export var config: audio_config
 
 var hub_layer1: AudioStreamPlayer
 var hub_layer2: AudioStreamPlayer
@@ -53,9 +45,11 @@ var _boundary_id := 0
 
 var _boss_last_layer1_path := ""
 var _boss_last_layer2_path := ""
+var _config: audio_config
 
 func _ready() -> void:
 	instance = self
+	_config = config if config else audio_config.new()
 	_rng.randomize()
 	_setup_players()
 
@@ -76,7 +70,7 @@ func _setup_players() -> void:
 func _make_player(player_name: String) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
 	player.name = player_name
-	player.volume_db = HUB_LAYER_SILENT_DB
+	player.volume_db = _config.hub_layer_silent_db
 	add_child(player)
 	return player
 
@@ -119,7 +113,7 @@ func start_boss_music() -> void:
 
 func fade_out_all(duration: float) -> void:
 	_transition_fading = true
-	_fade_players([hub_layer1, hub_layer2, hub_layer3, boss_layer1, boss_layer2], HUB_LAYER_SILENT_DB, duration)
+	_fade_players([hub_layer1, hub_layer2, hub_layer3, boss_layer1, boss_layer2], _config.hub_layer_silent_db, duration)
 
 func prepare_transition_silence() -> void:
 	if _fade_tween and _fade_tween.is_running():
@@ -139,9 +133,9 @@ func get_time_to_next_boundary() -> float:
 func get_segment_length() -> float:
 	var master := _get_master_player()
 	if master == null or master.stream == null:
-		return SEGMENT_FALLBACK_LENGTH
+		return _config.segment_fallback_length
 	var length := master.stream.get_length()
-	return length if length > 0.0 else SEGMENT_FALLBACK_LENGTH
+	return length if length > 0.0 else _config.segment_fallback_length
 
 func is_master_playing() -> bool:
 	var master := _get_master_player()
@@ -150,19 +144,19 @@ func is_master_playing() -> bool:
 func set_hub_dialogue_suppressed(enabled: bool) -> void:
 	_hub_layers_suppressed = enabled
 	if enabled:
-		hub_layer2.volume_db = HUB_LAYER_SILENT_DB
-		hub_layer3.volume_db = HUB_LAYER_SILENT_DB
+		hub_layer2.volume_db = _config.hub_layer_silent_db
+		hub_layer3.volume_db = _config.hub_layer_silent_db
 
 func _start_hub_intro() -> void:
 	_hub_mode = "intro"
 	hub_layer1.stream = _get_stream(HUB_LAYER1_INTRO_PATH)
-	hub_layer1.volume_db = HUB_LAYER_BASE_DB
+	hub_layer1.volume_db = _config.hub_layer_base_db
 	hub_layer1.play()
 	hub_layer2.stream = _get_stream(HUB_LAYER2_BASE_PATH)
-	hub_layer2.volume_db = HUB_LAYER_SILENT_DB
+	hub_layer2.volume_db = _config.hub_layer_silent_db
 	hub_layer2.stop()
 	hub_layer3.stream = _get_stream(HUB_LAYER3_BASE_PATH)
-	hub_layer3.volume_db = HUB_LAYER_SILENT_DB
+	hub_layer3.volume_db = _config.hub_layer_silent_db
 	hub_layer3.stop()
 
 func _on_hub_master_finished() -> void:
@@ -182,7 +176,7 @@ func _on_hub_master_finished() -> void:
 func _restart_hub_layers(keep_volume: bool = false) -> void:
 	hub_layer1.stream = _get_stream(HUB_LAYER1_BASE_PATH if _hub_mode == "base" else HUB_LAYER1_INTRO_PATH)
 	if not keep_volume:
-		hub_layer1.volume_db = HUB_LAYER_BASE_DB
+		hub_layer1.volume_db = _config.hub_layer_base_db
 	hub_layer1.play()
 	hub_layer2.stream = _get_stream(HUB_LAYER2_BASE_PATH)
 	hub_layer2.play()
@@ -200,12 +194,12 @@ func _update_hub_layers(delta: float) -> void:
 		return
 	var guardian := guardian_node as Node2D
 	var distance := player.global_position.distance_to(guardian.global_position)
-	var t: float = clamp(1.0 - (distance / HUB_LAYER_MAX_DISTANCE), 0.0, 1.0)
-	var layer2_target: float = lerp(HUB_LAYER2_MIN_DB, HUB_LAYER2_MAX_DB, t)
-	var layer3_target: float = lerp(HUB_LAYER3_MIN_DB, HUB_LAYER3_MAX_DB, t * t)
+	var t: float = clamp(1.0 - (distance / _config.hub_layer_max_distance), 0.0, 1.0)
+	var layer2_target: float = lerp(_config.hub_layer2_min_db, _config.hub_layer2_max_db, t)
+	var layer3_target: float = lerp(_config.hub_layer3_min_db, _config.hub_layer3_max_db, t * t)
 	if _hub_layers_suppressed:
-		layer2_target = HUB_LAYER_SILENT_DB
-		layer3_target = HUB_LAYER_SILENT_DB
+		layer2_target = _config.hub_layer_silent_db
+		layer3_target = _config.hub_layer_silent_db
 	hub_layer2.volume_db = lerp(hub_layer2.volume_db, layer2_target, 4.0 * delta)
 	hub_layer3.volume_db = lerp(hub_layer3.volume_db, layer3_target, 4.0 * delta)
 
@@ -217,8 +211,8 @@ func _start_boss_intro() -> void:
 	_boss_last_layer2_path = BOSS_LAYER2_INTRO_PATH
 	boss_layer1.stream = _get_stream(BOSS_LAYER1_INTRO_PATH)
 	boss_layer2.stream = _get_stream(BOSS_LAYER2_INTRO_PATH)
-	boss_layer1.volume_db = BOSS_LAYER_DB
-	boss_layer2.volume_db = BOSS_LAYER_DB
+	boss_layer1.volume_db = _config.boss_layer_db
+	boss_layer2.volume_db = _config.boss_layer_db
 	boss_layer1.play()
 	boss_layer2.play()
 
@@ -248,8 +242,8 @@ func _restart_boss_layers(keep_volume: bool = false) -> void:
 	boss_layer1.stream = _get_stream(_boss_last_layer1_path)
 	boss_layer2.stream = _get_stream(_boss_last_layer2_path)
 	if not keep_volume:
-		boss_layer1.volume_db = BOSS_LAYER_DB
-		boss_layer2.volume_db = BOSS_LAYER_DB
+		boss_layer1.volume_db = _config.boss_layer_db
+		boss_layer2.volume_db = _config.boss_layer_db
 	boss_layer1.play()
 	boss_layer2.play()
 
