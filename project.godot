@@ -25,3 +25,12 @@ GameDirector="*res://scripts/game_director.gd"
 window/size/viewport_width=640
 window/size/viewport_height=375
 window/stretch/mode="viewport"
+
+[input]
+
+move_left={"deadzone":0.2,"events":[{"type":"key","keycode":65,"physical_keycode":65},{"type":"key","keycode":16777231,"physical_keycode":16777231},{"type":"joypad_motion","axis":0,"axis_value":-1.0}]}
+move_right={"deadzone":0.2,"events":[{"type":"key","keycode":68,"physical_keycode":68},{"type":"key","keycode":16777233,"physical_keycode":16777233},{"type":"joypad_motion","axis":0,"axis_value":1.0}]}
+jump={"deadzone":0.5,"events":[{"type":"key","keycode":32,"physical_keycode":32},{"type":"joypad_button","button_index":0}]}
+attack={"deadzone":0.5,"events":[{"type":"key","keycode":74,"physical_keycode":74},{"type":"joypad_button","button_index":2}]}
+interact={"deadzone":0.5,"events":[{"type":"key","keycode":75,"physical_keycode":75},{"type":"joypad_button","button_index":3}]}
+reset={"deadzone":0.5,"events":[{"type":"key","keycode":82,"physical_keycode":82},{"type":"joypad_button","button_index":10}]}

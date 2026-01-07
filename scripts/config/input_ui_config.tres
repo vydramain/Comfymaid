@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="input_ui_config" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/input_ui_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+token_actions = {
+"ATTACK": PackedStringArray(["attack"]),
+"INTERACT": PackedStringArray(["interact"]),
+"JUMP": PackedStringArray(["jump"]),
+"MOVE": PackedStringArray(["move_left", "move_right"]),
+"RESET": PackedStringArray(["reset"])
+}
+keyboard_joiner = "/"
+gamepad_joiner = "/"
+gamepad_button_labels = {
+0: "A",
+2: "X",
+3: "△",
+10: "R3"
+}
+gamepad_axis_labels = {
+0: "LS"
+}
