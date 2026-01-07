@@ -14,7 +14,7 @@ loop_mode = 1
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite:texture")
+tracks/0/path = NodePath("VisualRoot/Sprite:texture")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -26,7 +26,7 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Sprite:hframes")
+tracks/1/path = NodePath("VisualRoot/Sprite:hframes")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
@@ -38,7 +38,7 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Sprite:vframes")
+tracks/2/path = NodePath("VisualRoot/Sprite:vframes")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -50,7 +50,7 @@ tracks/2/keys = {
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Sprite:frame")
+tracks/3/path = NodePath("VisualRoot/Sprite:frame")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
@@ -67,7 +67,7 @@ loop_mode = 1
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite:texture")
+tracks/0/path = NodePath("VisualRoot/Sprite:texture")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -79,7 +79,7 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Sprite:hframes")
+tracks/1/path = NodePath("VisualRoot/Sprite:hframes")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
@@ -91,7 +91,7 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Sprite:vframes")
+tracks/2/path = NodePath("VisualRoot/Sprite:vframes")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -103,7 +103,7 @@ tracks/2/keys = {
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Sprite:frame")
+tracks/3/path = NodePath("VisualRoot/Sprite:frame")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
@@ -121,7 +121,13 @@ tracks/4/loop_wrap = true
 tracks/4/keys = {
 "times": PackedFloat32Array(0, 1),
 "transitions": PackedFloat32Array(1, 1),
-"values": [{"method": "spawn_smoke_right", "args": []}, {"method": "spawn_smoke_left", "args": []}]
+"values": [{
+"args": [&"right"],
+"method": &"spawn_smoke_step"
+}, {
+"args": [&"left"],
+"method": &"spawn_smoke_step"
+}]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_1"]
@@ -131,7 +137,7 @@ _data = {
 }
 
 [sub_resource type="RectangleShape2D" id="2"]
-size = Vector2(75, 84)
+size = Vector2(110, 120)
 
 [node name="Boss" type="CharacterBody2D"]
 script = ExtResource("1")
@@ -141,25 +147,39 @@ smoke_scene = ExtResource("4")
 position = Vector2(0, -24)
 shape = SubResource("RectangleShape2D_gw42l")
 
-[node name="Sprite" type="Sprite2D" parent="."]
-position = Vector2(0, -32)
+[node name="VisualRoot" type="Node2D" parent="."]
+scale = Vector2(1.5, 1.5)
+
+[node name="Sprite" type="Sprite2D" parent="VisualRoot"]
+texture_filter = 1
+texture_repeat = 1
+position = Vector2(-1.6093254e-06, -32)
+scale = Vector2(0.97222227, 1)
 texture = ExtResource("2")
+
+[node name="FootMarkers" type="Node2D" parent="VisualRoot"]
+
+[node name="LeftFootMarker" type="Marker2D" parent="VisualRoot/FootMarkers"]
+position = Vector2(-17.333334, 10)
+
+[node name="RightFootMarker" type="Marker2D" parent="VisualRoot/FootMarkers"]
+position = Vector2(17.333334, 10)
+
+[node name="SmokeEmitters" type="Node2D" parent="VisualRoot"]
+
+[node name="SmokeEmitterLeft" type="Marker2D" parent="VisualRoot/SmokeEmitters"]
+position = Vector2(-50, 10)
+
+[node name="SmokeEmitterRight" type="Marker2D" parent="VisualRoot/SmokeEmitters"]
+position = Vector2(50.000004, 10)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
 &"": SubResource("AnimationLibrary_1")
 }
 
-[node name="FootMarkers" type="Node2D" parent="."]
-
-[node name="LeftFootMarker" type="Marker2D" parent="FootMarkers"]
-position = Vector2(-12, 0)
-
-[node name="RightFootMarker" type="Marker2D" parent="FootMarkers"]
-position = Vector2(12, 0)
-
 [node name="DamageArea" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DamageArea"]
-position = Vector2(2.5, -26)
+position = Vector2(0, -36)
 shape = SubResource("2")

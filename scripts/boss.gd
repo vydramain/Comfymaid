@@ -10,9 +10,13 @@ const BOSS_INVALID_DEATH_PAUSE := 0.5
 const BOSS_FINAL_DEATH_FADE_TIME := 0.4
 
 @export var ai_enabled := true
-@export var move_speed := 120.0
+@export var move_speed := 45.0
 @export var acceleration := 800.0
 @export var stop_distance := 12.0
+@export var smoke_offset_x := 12.0
+@export var smoke_push_distance := 10.0
+@export var smoke_push_time := 0.15
+@export var smoke_follow_time := 0.2
 @export var debug_boss := false
 @export var smoke_scene: PackedScene
 
@@ -25,9 +29,12 @@ var _base_modulate := Color(1, 1, 1)
 
 @onready var damage_area: Area2D = $DamageArea
 @onready var anim_player: AnimationPlayer = $AnimationPlayer
-@onready var sprite: Sprite2D = $Sprite
-@onready var left_foot: Marker2D = $FootMarkers/LeftFootMarker
-@onready var right_foot: Marker2D = $FootMarkers/RightFootMarker
+@onready var visual_root: Node2D = $VisualRoot
+@onready var sprite: Sprite2D = $VisualRoot/Sprite
+@onready var left_foot: Marker2D = $VisualRoot/FootMarkers/LeftFootMarker
+@onready var right_foot: Marker2D = $VisualRoot/FootMarkers/RightFootMarker
+@onready var smoke_left: Marker2D = $VisualRoot/SmokeEmitters/SmokeEmitterLeft
+@onready var smoke_right: Marker2D = $VisualRoot/SmokeEmitters/SmokeEmitterRight
 
 func _ready() -> void:
 	_hp = BOSS_MAX_HP
@@ -78,6 +85,12 @@ func _play_animation(anim_name: StringName) -> void:
 	if anim_player.current_animation == anim_name:
 		return
 	anim_player.play(anim_name)
+	_update_facing_visual()
+
+func _update_facing_visual() -> void:
+	if sprite == null:
+		return
+	sprite.scale.x = 1 if _facing >= 0 else -1
 
 func _is_defeated() -> bool:
 	return GameDirector.instance != null and GameDirector.instance.boss_defeated
@@ -175,11 +188,17 @@ func _on_damage_body(body: Node) -> void:
 	if body and body.has_method("take_hit") and body.is_in_group("player"):
 		body.take_hit(1)
 
+func spawn_smoke_step(side: StringName) -> void:
+	if side == &"left":
+		_spawn_smoke(smoke_left)
+	elif side == &"right":
+		_spawn_smoke(smoke_right)
+
 func spawn_smoke_left() -> void:
-	_spawn_smoke(left_foot)
+	spawn_smoke_step(&"left")
 
 func spawn_smoke_right() -> void:
-	_spawn_smoke(right_foot)
+	spawn_smoke_step(&"right")
 
 func _spawn_smoke(marker: Marker2D) -> void:
 	if smoke_scene == null or marker == null:
@@ -188,11 +207,16 @@ func _spawn_smoke(marker: Marker2D) -> void:
 		return
 	var smoke := smoke_scene.instantiate()
 	var root := SceneManager.instance.current_level if SceneManager.instance else get_parent()
-	if root:
-		root.add_child(smoke)
-		if smoke is Node2D:
-			(smoke as Node2D).global_position = marker.global_position
-	if smoke.has_method("set_facing"):
-		smoke.set_facing(_facing)
+	var emitter_parent := marker
+	if emitter_parent and smoke is Node2D:
+		emitter_parent.add_child(smoke)
+		var spawn_pos := marker.global_position
+		var dir := 1 if spawn_pos.x >= global_position.x else -1
+		spawn_pos.x += smoke_offset_x * dir
+		(smoke as Node2D).global_position = spawn_pos
+		if smoke.has_method("set_direction"):
+			smoke.set_direction(dir, smoke_push_distance, smoke_push_time)
+		if smoke.has_method("set_follow_root") and root:
+			smoke.set_follow_root(root, smoke_follow_time)
 	if debug_boss:
 		print("Boss smoke at ", marker.global_position)
