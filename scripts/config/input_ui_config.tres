@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="input_ui_config" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/input_ui_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+token_actions = {
+"ATTACK": PackedStringArray(["attack"]),
+"INTERACT": PackedStringArray(["interact"]),
+"JUMP": PackedStringArray(["jump"]),
+"MOVE": PackedStringArray(["move_left", "move_right"]),
+"RESET": PackedStringArray(["reset"])
+}
+keyboard_joiner = "/"
+gamepad_joiner = "/"
+gamepad_button_labels = {
+0: "A",
+2: "X",
+3: "△",
+10: "R3"
+}
+gamepad_axis_labels = {
+0: "LS"
+}
+xbox_keywords = PackedStringArray(["Xbox", "XInput", "Microsoft"])
+playstation_keywords = PackedStringArray(["PlayStation", "DualSense", "DualShock", "Sony", "PS"])
+nintendo_keywords = PackedStringArray(["Nintendo", "Switch", "Pro Controller"])
+xbox_button_labels = {
+0: "A",
+1: "B",
+2: "X",
+3: "Y",
+10: "R3"
+}
+playstation_button_labels = {
+0: "Cross",
+1: "Circle",
+2: "Square",
+3: "Triangle",
+10: "R3"
+}
+nintendo_button_labels = {
+0: "B",
+1: "A",
+2: "Y",
+3: "X",
+10: "R3"
+}
+display_physical_keys = true
+label_cache_ttl = 0.4

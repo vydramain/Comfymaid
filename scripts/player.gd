@@ -20,6 +20,7 @@ var _nearest: Area2D
 var _bounds_rect := Rect2(Vector2.ZERO, Vector2(1024, 600))
 var _hint_used := false
 var _config: player_config
+var _reset_hold_timer := 0.0
 
 @onready var visual: Node2D = $Visual
 @onready var interaction_detector: Area2D = $InteractionDetector
@@ -61,8 +62,7 @@ func _physics_process(delta: float) -> void:
 	_handle_attack(delta)
 	move_and_slide()
 	_update_visual_flip()
-	if Input.is_action_just_pressed("reset") and GameDirector.instance:
-		GameDirector.instance.request_reset()
+	_handle_reset(delta)
 
 func _handle_horizontal(delta: float) -> void:
 	var input_axis := Input.get_axis("move_left", "move_right")
@@ -107,6 +107,28 @@ func _handle_attack(delta: float) -> void:
 		_attack_anim_timer = _config.attack_anim_duration
 		_play_animation("attack")
 		_spawn_attack_hitbox()
+
+func _handle_reset(delta: float) -> void:
+	if not _can_reset():
+		_reset_hold_timer = 0.0
+		return
+	if Input.is_action_pressed("reset"):
+		_reset_hold_timer += delta
+		if _reset_hold_timer >= _config.reset_hold_time:
+			_reset_hold_timer = 0.0
+			GameDirector.instance.request_reset()
+	else:
+		_reset_hold_timer = 0.0
+
+func _can_reset() -> bool:
+	if GameDirector.instance == null:
+		return false
+	if not _config.allow_reset_in_release and not OS.has_feature("debug"):
+		return false
+	if GameDirector.instance.dialogue_ui and GameDirector.instance.dialogue_ui.has_method("is_active"):
+		if GameDirector.instance.dialogue_ui.is_active():
+			return false
+	return true
 
 func _spawn_attack_hitbox() -> void:
 	var hitbox := Area2D.new()
