@@ -39,7 +39,9 @@ func _ready() -> void:
 	_config = config if config else AudioConfig.new()
 	_rng.randomize()
 	_setup_players()
-	_validate_config()
+	if _validate_config():
+		set_process(false)
+		stop_all_music()
 
 func _exit_tree() -> void:
 	if instance == self:
@@ -297,7 +299,7 @@ func _get_stream(path: String) -> AudioStream:
 	_stream_cache[path] = stream
 	return stream
 
-func _validate_config() -> void:
+func _validate_config() -> bool:
 	var issues := false
 	if _config.guardian_group.is_empty():
 		push_error("AudioConfig.guardian_group is empty.")
@@ -323,6 +325,7 @@ func _validate_config() -> void:
 	issues = _validate_audio_array("boss_layer2_base_paths", _config.boss_layer2_base_paths) or issues
 	if issues:
 		push_error("AudioConfig validation failed; audio playback may be silent.")
+	return issues
 
 func _validate_audio_path(label: String, path: String) -> bool:
 	if path.is_empty():

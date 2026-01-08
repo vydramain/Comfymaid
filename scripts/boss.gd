@@ -24,7 +24,10 @@ var _config: BossConfig
 @onready var smoke_right: Marker2D = $VisualRoot/SmokeEmitters/SmokeEmitterRight
 
 func _ready() -> void:
+	if config == null:
+		push_error("Boss config is missing; falling back to defaults.")
 	_config = config if config else BossConfig.new()
+	_validate_config()
 	_hp = _config.max_hp
 	if damage_area:
 		damage_area.body_entered.connect(_on_damage_body)
@@ -36,6 +39,26 @@ func _physics_process(delta: float) -> void:
 	_update_ai(delta)
 	_apply_gravity(delta)
 	move_and_slide()
+
+func _validate_config() -> void:
+	_config.max_hp = max(_config.max_hp, 1)
+	_config.gravity = max(_config.gravity, 0.0)
+	_config.max_fall_speed = max(_config.max_fall_speed, 0.0)
+	_config.iframe_duration = max(_config.iframe_duration, 0.0)
+	_config.hit_flash_interval = max(_config.hit_flash_interval, 0.01)
+	_config.invalid_death_shrink_time = max(_config.invalid_death_shrink_time, 0.01)
+	_config.invalid_death_pause = max(_config.invalid_death_pause, 0.0)
+	_config.final_death_fade_time = max(_config.final_death_fade_time, 0.01)
+	_config.move_speed = max(_config.move_speed, 0.0)
+	_config.acceleration = max(_config.acceleration, 0.0)
+	_config.stop_distance = max(_config.stop_distance, 0.0)
+	if _config.walk_anim_speed_threshold <= 0.0 or _config.walk_anim_speed_threshold > _config.move_speed:
+		push_warning("BossConfig.walk_anim_speed_threshold out of range; using 10% of move_speed.")
+		_config.walk_anim_speed_threshold = max(_config.move_speed * 0.1, 1.0)
+	_config.smoke_offset_x = max(_config.smoke_offset_x, 0.0)
+	_config.smoke_push_distance = max(_config.smoke_push_distance, 0.0)
+	_config.smoke_push_time = max(_config.smoke_push_time, 0.01)
+	_config.smoke_follow_time = max(_config.smoke_follow_time, 0.01)
 
 func _update_ai(delta: float) -> void:
 	var can_move := ai_enabled and not _reviving and not _is_defeated()
