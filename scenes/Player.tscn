@@ -45,3 +45,9 @@ drag_right_margin = 0.5
 
 [node name="HintMarker" type="Marker2D" parent="."]
 position = Vector2(0, -34)
+
+[node name="AttackMarker" type="Marker2D" parent="."]
+position = Vector2(16, -4)
+
+[node name="AttackHitboxTimer" type="Timer" parent="."]
+one_shot = true

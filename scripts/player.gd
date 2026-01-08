@@ -1,6 +1,7 @@
 extends CharacterBody2D
 
 @export var config: player_config
+@export var attack_hitbox_scene: PackedScene
 
 var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
@@ -18,12 +19,15 @@ var _bounds_rect := Rect2(Vector2.ZERO, Vector2(1024, 600))
 var _hint_used := false
 var _config: player_config
 var _reset_hold_timer := 0.0
+var _attack_hitbox: Area2D
 
 @onready var visual: Node2D = $Visual
 @onready var interaction_resolver: Area2D = $InteractionResolver
 @onready var camera: Camera2D = $Camera2D
 @onready var sprite: AnimatedSprite2D = $Visual/Sprite
 @onready var hint_marker: Marker2D = $HintMarker
+@onready var attack_marker: Marker2D = $AttackMarker
+@onready var attack_hitbox_timer: Timer = $AttackHitboxTimer
 
 func _ready() -> void:
 	_config = config if config else player_config.new()
@@ -34,6 +38,8 @@ func _ready() -> void:
 		interaction_resolver.prompt_offset = _config.interact_prompt_offset
 	if SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
+	_setup_attack_hitbox()
+	_setup_attack_hitbox_timer()
 	_update_camera_bounds()
 
 func _process(delta: float) -> void:
@@ -126,31 +132,52 @@ func _can_reset() -> bool:
 	return true
 
 func _spawn_attack_hitbox() -> void:
-	var hitbox := Area2D.new()
-	var shape := CollisionPolygon2D.new()
-	var polygon := _make_semicircle(_config.attack_radius)
-	shape.polygon = polygon
-	hitbox.add_child(shape)
-	# hitbox.position = Vector2(_config.attack_radius * _facing, -4)
-	hitbox.position.x = (_facing * (_config.width * 0.5 + _config.attack_radius * 0.1))
-	hitbox.scale.x = _facing
-	hitbox.monitoring = true
-	hitbox.collision_layer = 0
-	hitbox.collision_mask = 1
-	add_child(hitbox)
-	hitbox.body_entered.connect(_on_attack_hit)
-	hitbox.area_entered.connect(_on_attack_hit)
-	get_tree().create_timer(_config.attack_duration).timeout.connect(hitbox.queue_free)
+	_activate_attack_hitbox()
 
-func _make_semicircle(radius: float) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	points.append(Vector2.ZERO)
-	var segments := 10
-	for i in range(segments + 1):
-		var t: float = float(i) / float(segments)
-		var angle: float = lerp(-PI * 0.5, PI * 0.5, t)
-		points.append(Vector2(cos(angle) * radius, sin(angle) * radius))
-	return points
+func _setup_attack_hitbox() -> void:
+	if attack_hitbox_scene:
+		_attack_hitbox = attack_hitbox_scene.instantiate()
+	elif has_node("AttackHitbox"):
+		_attack_hitbox = get_node("AttackHitbox")
+	if _attack_hitbox == null:
+		return
+	if _attack_hitbox.get_parent() == null:
+		if attack_marker:
+			attack_marker.add_child(_attack_hitbox)
+		else:
+			add_child(_attack_hitbox)
+	_attack_hitbox.monitoring = false
+	_attack_hitbox.collision_layer = 0
+	_attack_hitbox.collision_mask = 1
+	if not _attack_hitbox.body_entered.is_connected(_on_attack_hit):
+		_attack_hitbox.body_entered.connect(_on_attack_hit)
+	if not _attack_hitbox.area_entered.is_connected(_on_attack_hit):
+		_attack_hitbox.area_entered.connect(_on_attack_hit)
+
+func _setup_attack_hitbox_timer() -> void:
+	if attack_hitbox_timer == null:
+		attack_hitbox_timer = Timer.new()
+		attack_hitbox_timer.one_shot = true
+		add_child(attack_hitbox_timer)
+	if not attack_hitbox_timer.timeout.is_connected(_deactivate_attack_hitbox):
+		attack_hitbox_timer.timeout.connect(_deactivate_attack_hitbox)
+
+func _activate_attack_hitbox() -> void:
+	if _attack_hitbox == null:
+		return
+	if attack_marker:
+		attack_marker.scale.x = _facing
+	else:
+		_attack_hitbox.position.x = (_facing * (_config.width * 0.5 + _config.attack_radius * 0.1))
+		_attack_hitbox.scale.x = _facing
+	_attack_hitbox.monitoring = true
+	if attack_hitbox_timer:
+		attack_hitbox_timer.stop()
+		attack_hitbox_timer.start(_config.attack_duration)
+
+func _deactivate_attack_hitbox() -> void:
+	if _attack_hitbox:
+		_attack_hitbox.monitoring = false
 
 func _on_attack_hit(target: Node) -> void:
 	if target == self:
