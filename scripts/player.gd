@@ -4,6 +4,18 @@ extends CharacterBody2D
 @export var attack_hitbox_scene: PackedScene
 @export var camera_path: NodePath = NodePath("Camera2D")
 
+enum PlayerState {
+	IDLE,
+	RUN,
+	JUMP,
+	FALL,
+	ATTACK,
+	HIT,
+	DEAD
+}
+
+const HIT_STUN_DURATION := 0.2
+
 var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
 var _attack_timer := 0.0
@@ -21,6 +33,9 @@ var _hint_used := false
 var _config: player_config
 var _reset_hold_timer := 0.0
 var _attack_hitbox: Area2D
+var _hit_stun_timer := 0.0
+var _state: PlayerState = PlayerState.IDLE
+var _state_time := 0.0
 
 @onready var visual: Node2D = $Visual
 @onready var interaction_resolver: Area2D = $InteractionResolver
@@ -53,15 +68,11 @@ func _physics_process(delta: float) -> void:
 		_apply_gravity(delta)
 		move_and_slide()
 		return
-	if _attack_lock_timer > 0.0:
-		_attack_lock_timer = max(_attack_lock_timer - delta, 0.0)
-	_handle_input_buffering(delta)
-	if _attack_lock_timer == 0.0:
-		_handle_horizontal(delta)
-	_apply_gravity(delta)
-	_handle_jump()
-	_apply_variable_jump()
-	_handle_attack(delta)
+	_state_time += delta
+	_tick_attack_cooldown(delta)
+	_update_jump_timers(delta)
+	_handle_state_input(delta)
+	_handle_state_physics(delta)
 	move_and_slide()
 	_update_visual_flip()
 	_handle_reset(delta)
@@ -90,25 +101,123 @@ func _apply_variable_jump() -> void:
 	if Input.is_action_just_released("jump") and velocity.y < 0.0:
 		velocity.y *= 0.5
 
-func _handle_input_buffering(delta: float) -> void:
-	if Input.is_action_just_pressed("jump"):
-		_jump_buffer_timer = _config.jump_buffer_time
-	elif _jump_buffer_timer > 0.0:
+func _update_jump_timers(delta: float) -> void:
+	if _jump_buffer_timer > 0.0:
 		_jump_buffer_timer = max(_jump_buffer_timer - delta, 0.0)
 	if is_on_floor():
 		_coyote_timer = _config.coyote_time
 	elif _coyote_timer > 0.0:
 		_coyote_timer = max(_coyote_timer - delta, 0.0)
 
-func _handle_attack(delta: float) -> void:
+func _buffer_jump_input() -> void:
+	if Input.is_action_just_pressed("jump"):
+		_jump_buffer_timer = _config.jump_buffer_time
+
+func _tick_attack_cooldown(delta: float) -> void:
 	if _attack_timer > 0.0:
 		_attack_timer = max(_attack_timer - delta, 0.0)
-	if Input.is_action_just_pressed("attack") and _attack_timer == 0.0:
-		_attack_timer = _config.attack_cooldown
-		_attack_lock_timer = _config.attack_lock_time
-		_attack_anim_timer = _config.attack_anim_duration
-		_play_animation("attack")
-		_spawn_attack_hitbox()
+
+func _handle_state_input(delta: float) -> void:
+	match _state:
+		PlayerState.DEAD, PlayerState.HIT:
+			return
+		PlayerState.ATTACK:
+			return
+		_:
+			_buffer_jump_input()
+			if Input.is_action_just_pressed("attack"):
+				_try_start_attack()
+
+func _handle_state_physics(delta: float) -> void:
+	match _state:
+		PlayerState.DEAD:
+			velocity.x = move_toward(velocity.x, 0.0, _config.deceleration * delta)
+			_apply_gravity(delta)
+			return
+		PlayerState.HIT:
+			_hit_stun_timer = max(_hit_stun_timer - delta, 0.0)
+			velocity.x = move_toward(velocity.x, 0.0, _config.deceleration * delta)
+			_apply_gravity(delta)
+			if _hit_stun_timer == 0.0:
+				_set_state(_resolve_locomotion_state())
+			return
+		PlayerState.ATTACK:
+			if _attack_lock_timer > 0.0:
+				_attack_lock_timer = max(_attack_lock_timer - delta, 0.0)
+			if _attack_anim_timer > 0.0:
+				_attack_anim_timer = max(_attack_anim_timer - delta, 0.0)
+			if _attack_lock_timer == 0.0:
+				_handle_horizontal(delta)
+			_apply_gravity(delta)
+			if _attack_anim_timer == 0.0:
+				_set_state(_resolve_locomotion_state())
+			return
+		_:
+			_handle_horizontal(delta)
+			_apply_gravity(delta)
+			_handle_jump()
+			_apply_variable_jump()
+			_update_locomotion_state()
+
+func _try_start_attack() -> void:
+	if _state != PlayerState.IDLE and _state != PlayerState.RUN:
+		return
+	if _attack_timer > 0.0:
+		return
+	_attack_timer = _config.attack_cooldown
+	_attack_lock_timer = _config.attack_lock_time
+	_attack_anim_timer = _config.attack_anim_duration
+	_set_state(PlayerState.ATTACK)
+	_spawn_attack_hitbox()
+
+func _resolve_locomotion_state() -> PlayerState:
+	if not is_on_floor():
+		return PlayerState.JUMP if velocity.y < 0.0 else PlayerState.FALL
+	if abs(velocity.x) > 5.0:
+		return PlayerState.RUN
+	return PlayerState.IDLE
+
+func _update_locomotion_state() -> void:
+	_set_state(_resolve_locomotion_state())
+
+func _set_state(next_state: PlayerState) -> void:
+	if _state == next_state:
+		return
+	_on_exit_state(_state)
+	_state = next_state
+	_state_time = 0.0
+	_on_enter_state(_state)
+
+func _on_exit_state(state: PlayerState) -> void:
+	match state:
+		PlayerState.ATTACK:
+			_attack_lock_timer = 0.0
+			_attack_anim_timer = 0.0
+			_deactivate_attack_hitbox()
+		_:
+			return
+
+func _on_enter_state(state: PlayerState) -> void:
+	match state:
+		PlayerState.ATTACK:
+			_play_animation("attack")
+		PlayerState.HIT:
+			_hit_stun_timer = HIT_STUN_DURATION
+		PlayerState.DEAD:
+			_attack_lock_timer = 0.0
+			_attack_anim_timer = 0.0
+			_deactivate_attack_hitbox()
+			_set_interaction_enabled(false)
+		_:
+			return
+
+func _set_interaction_enabled(enabled: bool) -> void:
+	if interaction_resolver == null:
+		return
+	interaction_resolver.monitoring = enabled
+	interaction_resolver.set_process(enabled)
+	if not enabled and GameDirector.instance and GameDirector.instance.prompt_ui:
+		GameDirector.instance.prompt_ui.hide_prompt()
 
 func _handle_reset(delta: float) -> void:
 	if not _can_reset():
@@ -201,8 +310,12 @@ func take_hit(amount: int) -> void:
 		return
 	_hp = max(_hp - amount, 0)
 	_start_invuln()
-	if _hp <= 0 and GameDirector.instance:
-		GameDirector.instance.request_death_reset()
+	if _hp <= 0:
+		_set_state(PlayerState.DEAD)
+		if GameDirector.instance:
+			GameDirector.instance.request_death_reset()
+	else:
+		_set_state(PlayerState.HIT)
 
 func _start_invuln() -> void:
 	_invuln = true
@@ -240,9 +353,13 @@ func reset_state() -> void:
 	_attack_timer = 0.0
 	_attack_lock_timer = 0.0
 	_attack_anim_timer = 0.0
+	_hit_stun_timer = 0.0
 	_movement_enabled = true
 	_hp = _config.max_hp
 	_invuln = false
+	_stop_flicker()
+	_set_state(PlayerState.IDLE)
+	_set_interaction_enabled(true)
 
 func try_interact() -> void:
 	if interaction_resolver and interaction_resolver.has_method("try_interact"):
@@ -291,15 +408,13 @@ func _update_camera(delta: float) -> void:
 func _update_animation(delta: float) -> void:
 	if sprite == null:
 		return
-	if _attack_anim_timer > 0.0:
-		_attack_anim_timer = max(_attack_anim_timer - delta, 0.0)
-		if sprite.animation != "attack":
+	match _state:
+		PlayerState.ATTACK:
 			_play_animation("attack")
-		return
-	if abs(velocity.x) > 5.0 and is_on_floor():
-		_play_animation("run")
-	else:
-		_play_animation("idle")
+		PlayerState.RUN:
+			_play_animation("run")
+		_:
+			_play_animation("idle")
 
 func _play_animation(anim_name: StringName) -> void:
 	if sprite == null or sprite.animation == anim_name:
