@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://c8q6o7a07wfao"]
+[gd_scene load_steps=7 format=3 uid="uid://c8q6o7a07wfao"]
 
 [ext_resource type="Script" uid="uid://in1mhx7lfaa6" path="res://scripts/player.gd" id="1"]
 [ext_resource type="SpriteFrames" uid="uid://geo6yo6yjtgq" path="res://assets/sprites/wretch_frames.tres" id="2"]
 [ext_resource type="Resource" path="res://scripts/config/player_config.tres" id="3"]
+[ext_resource type="Script" uid="uid://du0ksyy6s75q2" path="res://scripts/interaction_resolver.gd" id="4"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(26, 58)
@@ -28,9 +29,10 @@ position = Vector2(16, 0)
 sprite_frames = ExtResource("2")
 animation = &"idle"
 
-[node name="InteractionDetector" type="Area2D" parent="."]
+[node name="InteractionResolver" type="Area2D" parent="."]
+script = ExtResource("4")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionDetector"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionResolver"]
 position = Vector2(0, 2)
 shape = SubResource("CapsuleShape2D_p0vlq")
 
