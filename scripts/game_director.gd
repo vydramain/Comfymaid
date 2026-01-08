@@ -8,7 +8,8 @@ const WHITEOUT_FADE_MAX := 3.0
 @export var game_state: GameState = GameState.new()
 
 var _scene_manager_connected := false
-var _ui_controller_connected := false
+var _ui_manager_connected := false
+var _ui_manager: Node
 
 var mechanic_broken: bool:
 	get:
@@ -61,30 +62,42 @@ var state: GameState.Phase:
 func _ready() -> void:
 	instance = self
 	if SceneManager.instance:
-		SceneManager.instance.level_changed.connect(_on_level_changed)
-		_scene_manager_connected = true
-	_bind_ui_controller()
+		set_scene_manager(SceneManager.instance)
 
 func _exit_tree() -> void:
 	if instance == self:
 		instance = null
 
-func _process(_delta: float) -> void:
-	if not _scene_manager_connected and SceneManager.instance:
-		SceneManager.instance.level_changed.connect(_on_level_changed)
-		_scene_manager_connected = true
-		if AudioDirector.instance and SceneManager.instance.current_scene_name != "":
-			AudioDirector.instance.start_scene_audio(SceneManager.instance.current_scene_name)
-	_bind_ui_controller()
+func set_scene_manager(scene_manager: SceneManager) -> void:
+	if scene_manager == null or _scene_manager_connected:
+		return
+	scene_manager.level_changed.connect(_on_level_changed)
+	_scene_manager_connected = true
 
-func _bind_ui_controller() -> void:
-	if _ui_controller_connected:
+func set_ui_manager(ui_manager: Node) -> void:
+	if ui_manager == null or ui_manager == _ui_manager:
 		return
-	if UIController.instance == null:
+	_disconnect_ui_manager_signals()
+	_ui_manager = ui_manager
+	if _ui_manager.has_signal("dialogue_started"):
+		if _ui_manager.dialogue_started.is_connected(_on_dialogue_started):
+			_ui_manager.dialogue_started.disconnect(_on_dialogue_started)
+		_ui_manager.dialogue_started.connect(_on_dialogue_started)
+	if _ui_manager.has_signal("dialogue_finished"):
+		if _ui_manager.dialogue_finished.is_connected(_on_dialogue_finished):
+			_ui_manager.dialogue_finished.disconnect(_on_dialogue_finished)
+		_ui_manager.dialogue_finished.connect(_on_dialogue_finished)
+	_ui_manager_connected = true
+
+func _disconnect_ui_manager_signals() -> void:
+	if not _ui_manager_connected or _ui_manager == null:
 		return
-	UIController.instance.dialogue_started.connect(_on_dialogue_started)
-	UIController.instance.dialogue_finished.connect(_on_dialogue_finished)
-	_ui_controller_connected = true
+	if is_instance_valid(_ui_manager):
+		if _ui_manager.has_signal("dialogue_started") and _ui_manager.dialogue_started.is_connected(_on_dialogue_started):
+			_ui_manager.dialogue_started.disconnect(_on_dialogue_started)
+		if _ui_manager.has_signal("dialogue_finished") and _ui_manager.dialogue_finished.is_connected(_on_dialogue_finished):
+			_ui_manager.dialogue_finished.disconnect(_on_dialogue_finished)
+	_ui_manager_connected = false
 
 func _on_dialogue_started() -> void:
 	var player := _get_player()
@@ -125,7 +138,7 @@ func request_scene_change(scene_name: StringName, spawn_marker: StringName = "Pl
 		return
 	state = GameState.Phase.TRANSITION
 	_set_player_movement(false)
-	if UIController.instance == null or UIController.instance.whiteout_ui == null:
+	if _ui_manager == null or not _ui_manager.has_method("has_whiteout") or not _ui_manager.has_whiteout():
 		_do_scene_change(scene_name, resolved_spawn_marker)
 		state = GameState.Phase.HUB_FREE if scene_name == "Hub" else GameState.Phase.BOSSROOM_FREE
 		_set_player_movement(true)
@@ -135,13 +148,13 @@ func request_scene_change(scene_name: StringName, spawn_marker: StringName = "Pl
 	if AudioDirector.instance:
 		_start_boundary_id = AudioDirector.instance.get_boundary_id()
 		AudioDirector.instance.fade_out_all(fade_time)
-	await UIController.instance.fade_to_white(fade_time)
+	await _ui_manager.fade_to_white(fade_time)
 	if AudioDirector.instance:
 		AudioDirector.instance.stop_all_music()
 	_do_scene_change(scene_name, resolved_spawn_marker)
 	if AudioDirector.instance:
 		AudioDirector.instance.start_scene_audio(scene_name)
-	await UIController.instance.fade_from_white(0.5)
+	await _ui_manager.fade_from_white(0.5)
 	state = GameState.Phase.HUB_FREE if scene_name == "Hub" else GameState.Phase.BOSSROOM_FREE
 	_set_player_movement(true)
 
@@ -177,8 +190,8 @@ func _reset_run_flags() -> void:
 func notify_boss_revive() -> void:
 	if not boss_revived_once:
 		boss_revived_once = true
-		if UIController.instance:
-			UIController.instance.show_overlay_line("Советы по игре будут?")
+		if _ui_manager and _ui_manager.has_method("show_overlay_line"):
+			_ui_manager.show_overlay_line("Советы по игре будут?")
 		var mechanic := SceneManager.instance.find_singleton_in_group("MechanicWord") if SceneManager.instance else null
 		if mechanic and mechanic.has_method("enable_word"):
 			mechanic.enable_word()

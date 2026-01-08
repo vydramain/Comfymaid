@@ -27,6 +27,13 @@ func _exit_tree() -> void:
 		instance = null
 
 func _ready() -> void:
+	if GameDirector.instance == null:
+		push_error("SceneManager requires GameDirector autoload to be ready.")
+		if OS.has_feature("debug"):
+			assert(false, "GameDirector autoload missing for SceneManager.")
+	else:
+		if GameDirector.instance.has_method("set_scene_manager"):
+			GameDirector.instance.set_scene_manager(self)
 	load_level(initial_scene, current_spawn_name)
 
 func load_level(scene_name: StringName, spawn_marker: StringName = "PlayerSpawn") -> void:
