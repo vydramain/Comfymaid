@@ -15,6 +15,8 @@ var _missing_reported := {}
 
 func _ready() -> void:
 	_resolve_ui()
+	if GameDirector.instance and GameDirector.instance.has_method("set_ui_manager"):
+		GameDirector.instance.set_ui_manager(self)
 	var tree := get_tree()
 	if tree:
 		tree.node_added.connect(_on_node_added)

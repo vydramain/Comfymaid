@@ -27,6 +27,8 @@ func _exit_tree() -> void:
 		instance = null
 
 func _ready() -> void:
+	if GameDirector.instance and GameDirector.instance.has_method("set_scene_manager"):
+		GameDirector.instance.set_scene_manager(self)
 	load_level(initial_scene, current_spawn_name)
 
 func load_level(scene_name: StringName, spawn_marker: StringName = "PlayerSpawn") -> void:
