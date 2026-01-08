@@ -46,9 +46,9 @@ func get_prompt_text() -> String:
 func interact(_interactor: Node) -> void:
 	if not enabled:
 		return
-	if GameDirector.instance == null or GameDirector.instance.dialogue_ui == null:
+	if UIController.instance == null or UIController.instance.dialogue_ui == null:
 		return
-	if GameDirector.instance.dialogue_ui.is_active():
+	if UIController.instance.is_dialogue_active():
 		return
 	if GameDirector.instance.boss_defeated:
 		_play_post_boss()
@@ -56,33 +56,33 @@ func interact(_interactor: Node) -> void:
 	_play_pre_boss()
 
 func _play_pre_boss() -> void:
-	var dialogue: Node = GameDirector.instance.dialogue_ui
+	var dialogue: Node = UIController.instance.dialogue_ui
 	if GameDirector.instance.guardian_death_hint_pending:
-		dialogue.start_dialogue(death_hint_lines)
+		UIController.instance.start_dialogue(death_hint_lines)
 		GameDirector.instance.guardian_death_hint_pending = false
 		return
 	if not GameDirector.instance.guardian_intro_done:
-		dialogue.start_dialogue(pre_boss_lines)
+		UIController.instance.start_dialogue(pre_boss_lines)
 		dialogue.dialogue_finished.connect(_on_intro_finished, CONNECT_ONE_SHOT)
 	elif _extra_index < extra_lines.size():
 		var lines: Array[String] = [extra_lines[_extra_index]]
-		dialogue.start_dialogue(lines)
+		UIController.instance.start_dialogue(lines)
 		_extra_index += 1
 	else:
 		if extra_lines.is_empty():
 			var lines: Array[String] = [pre_boss_lines.back()]
-			dialogue.start_dialogue(lines)
+			UIController.instance.start_dialogue(lines)
 		else:
 			var lines: Array[String] = [extra_lines.back()]
-			dialogue.start_dialogue(lines)
+			UIController.instance.start_dialogue(lines)
 
 func _on_intro_finished() -> void:
 	if GameDirector.instance:
 		GameDirector.instance.unlock_guardian_intro()
 
 func _play_post_boss() -> void:
-	var dialogue: Node = GameDirector.instance.dialogue_ui
-	dialogue.start_dialogue(post_boss_lines)
+	var dialogue: Node = UIController.instance.dialogue_ui
+	UIController.instance.start_dialogue(post_boss_lines)
 	dialogue.dialogue_finished.connect(_on_post_dialogue_finished, CONNECT_ONE_SHOT)
 
 func _on_post_dialogue_finished() -> void:
@@ -96,7 +96,7 @@ func _update_prompt() -> void:
 func _update_visual_state() -> void:
 	if sprite == null or GameDirector.instance == null:
 		return
-	if GameDirector.instance.dialogue_ui and GameDirector.instance.dialogue_ui.is_active():
+	if UIController.instance and UIController.instance.is_dialogue_active():
 		sprite.modulate = GUARDIAN_DIALOGUE_SUPPRESS_COLOR
 		_play_animation("idle")
 	else:

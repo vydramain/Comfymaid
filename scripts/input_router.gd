@@ -1,0 +1,224 @@
+extends Node
+
+enum InputType { KEYBOARD, GAMEPAD }
+
+static var instance: Node
+
+const INPUT_TYPE_INVALID := -1
+const INPUT_UI_CONFIG_PATH := "res://scripts/config/input_ui_config.tres"
+const JOYPAD_DEADZONE := 0.2
+const LABEL_CACHE_DEFAULT_TTL := 0.4
+
+var _last_input_type := InputType.KEYBOARD
+var _last_joypad_device_id := -1
+var _last_joypad_name := ""
+var _input_handlers: Dictionary = {}
+var _ui_config: input_ui_config
+var _label_cache: Dictionary = {}
+var _label_cache_time := 0.0
+var _label_cache_dirty := true
+
+func _ready() -> void:
+	instance = self
+	_ui_config = load(INPUT_UI_CONFIG_PATH) as input_ui_config
+	if _ui_config == null:
+		_ui_config = input_ui_config.new()
+	_setup_input_handlers()
+
+func _exit_tree() -> void:
+	if instance == self:
+		instance = null
+
+func _input(event: InputEvent) -> void:
+	var handler: Callable = _input_handlers.get(event.get_class(), Callable()) as Callable
+	var next: int = INPUT_TYPE_INVALID
+	if handler.is_valid():
+		next = handler.call(event)
+	if next != INPUT_TYPE_INVALID:
+		_update_last_input_device(event, next as InputType)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("interact"):
+		if UIController.instance and UIController.instance.is_dialogue_active():
+			if UIController.instance.can_advance_dialogue():
+				UIController.instance.advance_dialogue()
+			return
+		var player := _get_player()
+		if player and player.has_method("try_interact"):
+			player.try_interact()
+
+func _get_player() -> Node:
+	if SceneManager.instance:
+		return SceneManager.instance.player
+	return null
+
+func _setup_input_handlers() -> void:
+	_input_handlers = {
+		"InputEventKey": Callable(self, "_input_from_key"),
+		"InputEventJoypadButton": Callable(self, "_input_from_joy_button"),
+		"InputEventJoypadMotion": Callable(self, "_input_from_joy_motion"),
+	}
+
+func _input_from_key(event: InputEventKey) -> int:
+	return InputType.KEYBOARD if event.pressed else INPUT_TYPE_INVALID as int
+
+func _input_from_joy_button(event: InputEventJoypadButton) -> int:
+	return InputType.GAMEPAD if event.pressed else INPUT_TYPE_INVALID as int
+
+func _input_from_joy_motion(event: InputEventJoypadMotion) -> int:
+	return InputType.GAMEPAD if abs(event.axis_value) > JOYPAD_DEADZONE else INPUT_TYPE_INVALID as int
+
+func get_interact_label() -> String:
+	return get_action_label("INTERACT")
+
+func get_action_label(action: String) -> String:
+	_ensure_label_cache()
+	return _label_cache.get(action, "")
+
+func _ensure_label_cache() -> void:
+	if _ui_config == null:
+		_ui_config = input_ui_config.new()
+	var ttl := _ui_config.label_cache_ttl if _ui_config else LABEL_CACHE_DEFAULT_TTL
+	var now := Time.get_ticks_msec() / 1000.0
+	if not _label_cache_dirty and (now - _label_cache_time) < ttl:
+		return
+	_label_cache_time = now
+	_label_cache_dirty = false
+	_label_cache.clear()
+	for token in _ui_config.token_actions.keys():
+		_label_cache[str(token)] = _build_action_label(str(token))
+
+func _build_action_label(action: String) -> String:
+	var action_names := _ui_config.token_actions.get(action, PackedStringArray()) as PackedStringArray
+	if action_names.is_empty():
+		return ""
+	var labels: Array[String] = []
+	for action_name in action_names:
+		var label := _get_action_label_for_action(action_name, _last_input_type)
+		if label != "" and not labels.has(label):
+			labels.append(label)
+	var joiner := _ui_config.keyboard_joiner if _last_input_type == InputType.KEYBOARD else _ui_config.gamepad_joiner
+	return joiner.join(labels)
+
+func _get_action_label_for_action(action_name: StringName, input_type: InputType) -> String:
+	var event := _select_action_event(action_name, input_type)
+	if event == null:
+		return ""
+	return _event_to_label(event, input_type)
+
+func _select_action_event(action_name: StringName, input_type: InputType) -> InputEvent:
+	var events := InputMap.action_get_events(action_name)
+	if input_type == InputType.KEYBOARD:
+		return _select_key_event(events)
+	if input_type == InputType.GAMEPAD:
+		return _select_gamepad_event(events, _last_joypad_device_id)
+	return null
+
+func _select_key_event(events: Array) -> InputEventKey:
+	var preferred: InputEventKey
+	var fallback: InputEventKey
+	for event in events:
+		if event is InputEventKey:
+			if _is_modifier_free(event):
+				if preferred == null:
+					preferred = event
+			elif fallback == null:
+				fallback = event
+	return preferred if preferred != null else fallback
+
+func _select_gamepad_event(events: Array, device_id: int) -> InputEvent:
+	var button_event := _find_gamepad_event(events, device_id, true)
+	if button_event != null:
+		return button_event
+	var axis_event := _find_gamepad_event(events, device_id, false)
+	if axis_event != null:
+		return axis_event
+	if device_id == -1:
+		return null
+	button_event = _find_gamepad_event(events, -1, true, true)
+	if button_event != null:
+		return button_event
+	return _find_gamepad_event(events, -1, false, true)
+
+func _find_gamepad_event(events: Array, device_id: int, prefer_button: bool, allow_any: bool = false) -> InputEvent:
+	for event in events:
+		if prefer_button and event is InputEventJoypadButton:
+			if _gamepad_device_matches(event.device, device_id, allow_any):
+				return event
+		if not prefer_button and event is InputEventJoypadMotion:
+			if _gamepad_device_matches(event.device, device_id, allow_any):
+				return event
+	return null
+
+func _gamepad_device_matches(event_device: int, device_id: int, allow_any: bool) -> bool:
+	if allow_any:
+		return true
+	if device_id == -1:
+		return event_device == -1
+	return event_device == -1 or event_device == device_id
+
+func _event_to_label(event: InputEvent, input_type: InputType) -> String:
+	if input_type == InputType.KEYBOARD and event is InputEventKey:
+		return _format_key_label(event)
+	if input_type == InputType.GAMEPAD:
+		if event is InputEventJoypadButton:
+			return _ui_config.get_gamepad_button_label(event.button_index, _last_joypad_name)
+		if event is InputEventJoypadMotion:
+			return _ui_config.get_gamepad_axis_label(event.axis)
+	return ""
+
+func _format_key_label(event: InputEventKey) -> String:
+	var keycode := event.keycode
+	if _ui_config and _ui_config.display_physical_keys:
+		keycode = event.physical_keycode
+	var base := OS.get_keycode_string(keycode)
+	if base == "":
+		return ""
+	var prefixes: Array[String] = []
+	if event.ctrl_pressed:
+		prefixes.append("Ctrl")
+	if event.alt_pressed:
+		prefixes.append("Alt")
+	if event.shift_pressed:
+		prefixes.append("Shift")
+	if event.meta_pressed:
+		prefixes.append("Meta")
+	if prefixes.is_empty():
+		return base
+	return "+".join(prefixes) + "+" + base
+
+func _is_modifier_free(event: InputEventKey) -> bool:
+	return not event.ctrl_pressed and not event.alt_pressed and not event.shift_pressed and not event.meta_pressed
+
+func _update_last_input_device(event: InputEvent, input_type: InputType) -> void:
+	var changed := false
+	if _last_input_type != input_type:
+		_last_input_type = input_type
+		changed = true
+	if input_type == InputType.KEYBOARD:
+		if _last_joypad_device_id != -1:
+			_last_joypad_device_id = -1
+			_last_joypad_name = ""
+			changed = true
+	elif input_type == InputType.GAMEPAD:
+		var next_device := -1
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			next_device = event.device
+		if next_device != -1 and next_device != _last_joypad_device_id:
+			_last_joypad_device_id = next_device
+			_last_joypad_name = Input.get_joy_name(next_device)
+			changed = true
+	if changed:
+		_label_cache_dirty = true
+
+func format_prompt_text(text: String) -> String:
+	var result := text
+	result = result.replace("{MOVE}", get_action_label("MOVE"))
+	result = result.replace("{JUMP}", get_action_label("JUMP"))
+	result = result.replace("{ATTACK}", get_action_label("ATTACK"))
+	result = result.replace("{INTERACT}", get_action_label("INTERACT"))
+	result = result.replace("{RESET}", get_action_label("RESET"))
+	return result
+
+func get_input_label() -> String:
+	return "Gamepad" if _last_input_type == InputType.GAMEPAD else "Keyboard"

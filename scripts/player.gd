@@ -216,8 +216,8 @@ func _set_interaction_enabled(enabled: bool) -> void:
 		return
 	interaction_resolver.monitoring = enabled
 	interaction_resolver.set_process(enabled)
-	if not enabled and GameDirector.instance and GameDirector.instance.prompt_ui:
-		GameDirector.instance.prompt_ui.hide_prompt()
+	if not enabled and UIController.instance:
+		UIController.instance.hide_prompt()
 
 func _handle_reset(delta: float) -> void:
 	if not _can_reset():
@@ -236,9 +236,8 @@ func _can_reset() -> bool:
 		return false
 	if not _config.allow_reset_in_release and not OS.has_feature("debug"):
 		return false
-	if GameDirector.instance.dialogue_ui and GameDirector.instance.dialogue_ui.has_method("is_active"):
-		if GameDirector.instance.dialogue_ui.is_active():
-			return false
+	if UIController.instance and UIController.instance.is_dialogue_active():
+		return false
 	return true
 
 func _spawn_attack_hitbox() -> void:

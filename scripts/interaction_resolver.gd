@@ -13,7 +13,7 @@ func _ready() -> void:
 	area_exited.connect(_on_area_exited)
 
 func _process(_delta: float) -> void:
-	if GameDirector.instance and GameDirector.instance.dialogue_ui and GameDirector.instance.dialogue_ui.is_active():
+	if UIController.instance and UIController.instance.is_dialogue_active():
 		_clear_prompt()
 		return
 	_nearest = _find_nearest()
@@ -83,7 +83,7 @@ func _is_better_tiebreak(candidate: Area2D, current: Area2D) -> bool:
 	return candidate.get_instance_id() < current.get_instance_id()
 
 func _show_prompt(interactable: Area2D) -> void:
-	if GameDirector.instance == null or GameDirector.instance.prompt_ui == null:
+	if UIController.instance == null:
 		return
 	var text := "△ Interact"
 	if interactable.has_method("get_prompt_text"):
@@ -92,16 +92,16 @@ func _show_prompt(interactable: Area2D) -> void:
 		return
 	_last_prompt_target = interactable
 	_last_prompt_text = text
-	GameDirector.instance.prompt_ui.show_prompt(text, interactable.global_position + prompt_offset)
+	UIController.instance.show_prompt(text, interactable.global_position + prompt_offset)
 
 func _clear_prompt() -> void:
-	if GameDirector.instance == null or GameDirector.instance.prompt_ui == null:
+	if UIController.instance == null:
 		return
 	if _last_prompt_target == null and _last_prompt_text == "":
 		return
 	_last_prompt_target = null
 	_last_prompt_text = ""
-	GameDirector.instance.prompt_ui.hide_prompt()
+	UIController.instance.hide_prompt()
 
 func try_interact() -> void:
 	var target := _find_nearest()
