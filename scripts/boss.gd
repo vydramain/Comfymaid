@@ -138,7 +138,7 @@ func _final_death() -> void:
 	GameDirector.instance.notify_boss_defeated()
 
 func _enable_mechanic_word() -> void:
-	var mechanic := get_tree().get_first_node_in_group("MechanicWord")
+	var mechanic := SceneManager.instance.find_singleton_in_group("MechanicWord") if SceneManager.instance else null
 	if mechanic and mechanic.has_method("enable_word"):
 		mechanic.enable_word()
 

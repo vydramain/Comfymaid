@@ -87,3 +87,24 @@ func _resolve_level_container() -> Node:
 	if level_container_path != NodePath("") and has_node(level_container_path):
 		return get_node(level_container_path)
 	return get_parent()
+
+func find_singleton_in_group(group_name: StringName, root: Node = null) -> Node:
+	var search_root := root if root else current_level
+	if search_root == null:
+		return null
+	var matches: Array[Node] = []
+	_collect_group_nodes(search_root, group_name, matches)
+	if matches.is_empty():
+		push_warning("Group '%s' not found in current level." % group_name)
+		return null
+	if matches.size() > 1:
+		push_error("Group '%s' has %d nodes in current level." % [group_name, matches.size()])
+		if OS.has_feature("debug"):
+			assert(false, "Expected singleton group '%s' in current level." % group_name)
+	return matches[0]
+
+func _collect_group_nodes(node: Node, group_name: StringName, results: Array[Node]) -> void:
+	if node.is_in_group(group_name):
+		results.append(node)
+	for child in node.get_children():
+		_collect_group_nodes(child, group_name, results)

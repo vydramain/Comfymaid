@@ -50,7 +50,7 @@ func _on_level_changed(_scene_name: StringName) -> void:
     _update_bounds()
 
 func _update_bounds() -> void:
-    var bounds := get_tree().get_first_node_in_group("CameraBounds")
+    var bounds := SceneManager.instance.find_singleton_in_group("CameraBounds") if SceneManager.instance else null
     if bounds and bounds.has_node("BoundsRect"):
         var rect_node := bounds.get_node("BoundsRect")
         if rect_node is ReferenceRect:
