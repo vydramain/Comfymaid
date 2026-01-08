@@ -29,12 +29,17 @@ var _boundary_id := 0
 var _boss_last_layer1_path := ""
 var _boss_last_layer2_path := ""
 var _config: AudioConfig
+var _warned_missing_guardian := false
+var _warned_missing_boss := false
 
 func _ready() -> void:
 	instance = self
+	if config == null:
+		push_error("AudioDirector requires a configured AudioConfig resource; using defaults.")
 	_config = config if config else AudioConfig.new()
 	_rng.randomize()
 	_setup_players()
+	_validate_config()
 
 func _exit_tree() -> void:
 	if instance == self:
@@ -172,6 +177,9 @@ func _update_hub_layers(delta: float) -> void:
 	var player := SceneManager.instance.player if SceneManager.instance else null
 	var guardian_node := SceneManager.instance.find_singleton_in_group(_config.guardian_group) if SceneManager.instance else null
 	if player == null or guardian_node == null:
+		if guardian_node == null and not _warned_missing_guardian:
+			push_warning("Guardian node not found for group '%s'; hub proximity layers disabled." % _config.guardian_group)
+			_warned_missing_guardian = true
 		return
 	if not (guardian_node is Node2D):
 		return
@@ -264,6 +272,9 @@ func _update_boss_visibility() -> void:
 		return
 	var boss := SceneManager.instance.find_singleton_in_group(_config.boss_group) if SceneManager.instance else null
 	if boss == null:
+		if not _warned_missing_boss:
+			push_warning("Boss node not found for group '%s'; boss visibility checks disabled." % _config.boss_group)
+			_warned_missing_boss = true
 		return
 	var view_size: Vector2 = camera.get_viewport_rect().size / camera.zoom
 	var center: Vector2 = camera.get_screen_center_position()
@@ -277,11 +288,77 @@ func _get_master_player() -> AudioStreamPlayer:
 	return hub_layer1 if _current_scene == "Hub" else boss_layer1 if _current_scene == "BossRoom" else null
 
 func _get_stream(path: String) -> AudioStream:
+	if path.is_empty():
+		push_warning("AudioDirector received an empty audio path.")
+		return null
 	if _stream_cache.has(path):
 		return _stream_cache[path]
 	var stream: AudioStream = load(path)
 	_stream_cache[path] = stream
 	return stream
+
+func _validate_config() -> void:
+	var issues := false
+	if _config.guardian_group.is_empty():
+		push_error("AudioConfig.guardian_group is empty.")
+		issues = true
+	if _config.boss_group.is_empty():
+		push_error("AudioConfig.boss_group is empty.")
+		issues = true
+	var hub_paths := {
+		"hub_layer1_intro_path": _config.hub_layer1_intro_path,
+		"hub_layer1_base_path": _config.hub_layer1_base_path,
+		"hub_layer2_base_path": _config.hub_layer2_base_path,
+		"hub_layer3_base_path": _config.hub_layer3_base_path,
+	}
+	var boss_intro_paths := {
+		"boss_layer1_intro_path": _config.boss_layer1_intro_path,
+		"boss_layer2_intro_path": _config.boss_layer2_intro_path,
+	}
+	for key in hub_paths.keys():
+		issues = _validate_audio_path(key, hub_paths[key]) or issues
+	for key in boss_intro_paths.keys():
+		issues = _validate_audio_path(key, boss_intro_paths[key]) or issues
+	issues = _validate_audio_array("boss_layer1_base_paths", _config.boss_layer1_base_paths) or issues
+	issues = _validate_audio_array("boss_layer2_base_paths", _config.boss_layer2_base_paths) or issues
+	if issues:
+		push_error("AudioConfig validation failed; audio playback may be silent.")
+
+func _validate_audio_path(label: String, path: String) -> bool:
+	if path.is_empty():
+		push_error("AudioConfig.%s is empty." % label)
+		return true
+	if not ResourceLoader.exists(path):
+		push_error("AudioConfig.%s missing resource at %s." % [label, path])
+		return true
+	var stream := load(path)
+	if stream == null:
+		push_error("AudioConfig.%s failed to load %s." % [label, path])
+		return true
+	if not (stream is AudioStream):
+		push_error("AudioConfig.%s is not an AudioStream: %s." % [label, path])
+		return true
+	return false
+
+func _validate_audio_array(label: String, paths: Array[String]) -> bool:
+	var has_issue := false
+	if paths.is_empty():
+		push_error("AudioConfig.%s is empty." % label)
+		return true
+	var expected_length := -1.0
+	for index in range(paths.size()):
+		var path := paths[index]
+		if _validate_audio_path("%s[%d]" % [label, index], path):
+			has_issue = true
+			continue
+		var stream := load(path)
+		if stream is AudioStream:
+			var length := stream.get_length()
+			if expected_length < 0.0:
+				expected_length = length
+			elif length > 0.0 and abs(length - expected_length) > 0.01:
+				push_warning("AudioConfig.%s[%d] length %.2f differs from %.2f; loops may desync." % [label, index, length, expected_length])
+	return has_issue
 
 func _fade_players(players: Array, target_db: float, duration: float) -> void:
 	if _fade_tween and _fade_tween.is_running():
