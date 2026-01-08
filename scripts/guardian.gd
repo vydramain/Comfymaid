@@ -28,7 +28,7 @@ var _extra_index := 0
 @onready var anim_player: AnimationPlayer = $AnimationPlayer
 
 func _ready() -> void:
-	super._ready()
+	setup_interactable()
 	_play_animation("playing")
 
 func _process(_delta: float) -> void:
@@ -39,8 +39,6 @@ func get_prompt_text() -> String:
 	return prompt_text
 
 func interact(_interactor: Node) -> void:
-	if not enabled:
-		return
 	if UIController.instance == null or UIController.instance.dialogue_ui == null:
 		return
 	if UIController.instance.is_dialogue_active():

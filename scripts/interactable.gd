@@ -16,6 +16,9 @@ var _sprite: Sprite2D
 var _last_open_state := false
 
 func _ready() -> void:
+    setup_interactable()
+
+func setup_interactable() -> void:
     add_to_group("interactable")
     _sprite = get_node_or_null("Sprite2D") as Sprite2D
     if _sprite and closed_texture == null:
@@ -39,9 +42,12 @@ func is_enabled() -> bool:
 func get_prompt_text() -> String:
     return prompt_text
 
-func interact(interactor: Node) -> void:
-    if not enabled:
+func try_interact(interactor: Node) -> void:
+    if not is_enabled():
         return
+    interact(interactor)
+
+func interact(interactor: Node) -> void:
     if forward_to_parent and get_parent() and get_parent().has_method("interact"):
         get_parent().interact(interactor)
         return

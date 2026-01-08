@@ -38,7 +38,7 @@ func _on_interactable_tree_exited(area: Area2D) -> void:
 		_nearest = null
 
 func _is_valid_interactable(area: Area2D) -> bool:
-	return area != null and area.is_in_group("interactable") and area.has_method("interact")
+	return area != null and area.is_in_group("interactable") and area.has_method("try_interact")
 
 func _is_active_interactable(area: Area2D) -> bool:
 	if not _is_valid_interactable(area):
@@ -105,5 +105,5 @@ func _clear_prompt() -> void:
 
 func try_interact() -> void:
 	var target := _find_nearest()
-	if target and target.has_method("interact"):
-		target.interact(get_parent())
+	if target and target.has_method("try_interact"):
+		target.try_interact(get_parent())
