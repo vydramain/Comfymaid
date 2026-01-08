@@ -9,5 +9,5 @@ func _ready() -> void:
 func _on_body_entered(body: Node) -> void:
     if not body.is_in_group("player"):
         return
-    if SceneManager.instance and target_scene_name != "":
-        SceneManager.instance.change_scene(target_scene_name, target_spawn_marker)
+    if GameDirector.instance and target_scene_name != "":
+        GameDirector.instance.request_scene_change(target_scene_name, target_spawn_marker)
