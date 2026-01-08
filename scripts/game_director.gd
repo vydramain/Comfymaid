@@ -114,12 +114,19 @@ func _get_player() -> Node:
 	return null
 
 func request_scene_change(scene_name: StringName, spawn_marker: StringName = "PlayerSpawn") -> void:
+	if SceneManager.instance == null:
+		push_error("GameDirector requires SceneManager instance for scene transitions.")
+		return
+	if scene_name == "":
+		push_error("GameDirector request_scene_change called with empty scene_name.")
+		return
+	var resolved_spawn_marker: StringName = spawn_marker if spawn_marker != "" else "PlayerSpawn"
 	if state == GameState.Phase.TRANSITION:
 		return
 	state = GameState.Phase.TRANSITION
 	_set_player_movement(false)
 	if UIController.instance == null or UIController.instance.whiteout_ui == null:
-		_do_scene_change(scene_name, spawn_marker)
+		_do_scene_change(scene_name, resolved_spawn_marker)
 		state = GameState.Phase.HUB_FREE if scene_name == "Hub" else GameState.Phase.BOSSROOM_FREE
 		_set_player_movement(true)
 		return
@@ -131,7 +138,7 @@ func request_scene_change(scene_name: StringName, spawn_marker: StringName = "Pl
 	await UIController.instance.fade_to_white(fade_time)
 	if AudioDirector.instance:
 		AudioDirector.instance.stop_all_music()
-	_do_scene_change(scene_name, spawn_marker)
+	_do_scene_change(scene_name, resolved_spawn_marker)
 	if AudioDirector.instance:
 		AudioDirector.instance.start_scene_audio(scene_name)
 	await UIController.instance.fade_from_white(0.5)
