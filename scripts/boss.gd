@@ -138,11 +138,9 @@ func _final_death() -> void:
 	GameDirector.instance.notify_boss_defeated()
 
 func _enable_mechanic_word() -> void:
-	var root := SceneManager.instance.current_level if SceneManager.instance else null
-	if root:
-		var mechanic := root.get_node_or_null("MechanicWord")
-		if mechanic and mechanic.has_method("enable_word"):
-			mechanic.enable_word()
+	var mechanic := SceneManager.instance.find_singleton_in_group("MechanicWord") if SceneManager.instance else null
+	if mechanic and mechanic.has_method("enable_word"):
+		mechanic.enable_word()
 
 func _trigger_camera_hint() -> void:
 	if SceneManager.instance and SceneManager.instance.player:

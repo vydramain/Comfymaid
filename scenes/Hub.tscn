@@ -46,7 +46,7 @@ texture_repeat = 1
 position = Vector2(-629, 226)
 texture = ExtResource("2_7f5op")
 
-[node name="CameraBounds" type="Node2D" parent="."]
+[node name="CameraBounds" type="Node2D" parent="." groups=["CameraBounds"]]
 
 [node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
 offset_left = -950.0

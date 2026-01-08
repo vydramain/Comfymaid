@@ -187,7 +187,7 @@ func _update_hub_layers(delta: float) -> void:
 	if hub_layer2 == null or hub_layer3 == null:
 		return
 	var player := SceneManager.instance.player if SceneManager.instance else null
-	var guardian_node := SceneManager.instance.current_level.get_node_or_null("Guardian") if SceneManager.instance and SceneManager.instance.current_level else null
+	var guardian_node := SceneManager.instance.find_singleton_in_group("Guardian") if SceneManager.instance else null
 	if player == null or guardian_node == null:
 		return
 	if not (guardian_node is Node2D):
@@ -276,10 +276,10 @@ func _update_boss_visibility() -> void:
 	var player := SceneManager.instance.player if SceneManager.instance else null
 	if player == null:
 		return
-	var camera := player.get_node_or_null("Camera2D")
+	var camera := player.camera
 	if camera == null:
 		return
-	var boss := SceneManager.instance.current_level.get_node_or_null("Boss") if SceneManager.instance and SceneManager.instance.current_level else null
+	var boss := SceneManager.instance.find_singleton_in_group("Boss") if SceneManager.instance else null
 	if boss == null:
 		return
 	var view_size: Vector2 = camera.get_viewport_rect().size / camera.zoom
