@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-@export var config: player_config
+@export var config: PlayerConfig
 @export var attack_hitbox_scene: PackedScene
 @export var camera_path: NodePath = NodePath("Camera2D")
 
@@ -13,8 +13,6 @@ enum PlayerState {
 	HIT,
 	DEAD
 }
-
-const HIT_STUN_DURATION := 0.2
 
 var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
@@ -32,7 +30,7 @@ var _bounds_rect := Rect2(Vector2.ZERO, Vector2.ZERO)
 var _bounds_valid := false
 var _bounds_warning_emitted := false
 var _hint_used := false
-var _config: player_config
+var _config: PlayerConfig
 var _reset_hold_timer := 0.0
 var _attack_hitbox: Area2D
 var _hit_stun_timer := 0.0
@@ -48,7 +46,7 @@ var _state_time := 0.0
 @onready var attack_hitbox_timer: Timer = $AttackHitboxTimer
 
 func _ready() -> void:
-	_config = config if config else player_config.new()
+	_config = config if config else PlayerConfig.new()
 	_set_default_bounds("CameraBounds not found on ready")
 	add_to_group("player")
 	_hp = _config.max_hp
@@ -102,7 +100,7 @@ func _handle_jump() -> void:
 
 func _apply_variable_jump() -> void:
 	if Input.is_action_just_released("jump") and velocity.y < 0.0:
-		velocity.y *= 0.5
+		velocity.y *= _config.variable_jump_multiplier
 
 func _update_jump_timers(delta: float) -> void:
 	if _jump_buffer_timer > 0.0:
@@ -176,7 +174,7 @@ func _try_start_attack() -> void:
 func _resolve_locomotion_state() -> PlayerState:
 	if not is_on_floor():
 		return PlayerState.JUMP if velocity.y < 0.0 else PlayerState.FALL
-	if abs(velocity.x) > 5.0:
+	if abs(velocity.x) > _config.run_speed_threshold:
 		return PlayerState.RUN
 	return PlayerState.IDLE
 
@@ -205,7 +203,7 @@ func _on_enter_state(state: PlayerState) -> void:
 		PlayerState.ATTACK:
 			_play_animation("attack")
 		PlayerState.HIT:
-			_hit_stun_timer = HIT_STUN_DURATION
+			_hit_stun_timer = _config.hit_stun_duration
 		PlayerState.DEAD:
 			_attack_lock_timer = 0.0
 			_attack_anim_timer = 0.0

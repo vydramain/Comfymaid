@@ -191,8 +191,8 @@ func _update_hub_layers(delta: float) -> void:
 	if _hub_layers_suppressed:
 		layer2_target = _config.hub_layer_silent_db
 		layer3_target = _config.hub_layer_silent_db
-	hub_layer2.volume_db = lerp(hub_layer2.volume_db, layer2_target, 4.0 * delta)
-	hub_layer3.volume_db = lerp(hub_layer3.volume_db, layer3_target, 4.0 * delta)
+	hub_layer2.volume_db = lerp(hub_layer2.volume_db, layer2_target, _config.hub_layer_lerp_speed * delta)
+	hub_layer3.volume_db = lerp(hub_layer3.volume_db, layer3_target, _config.hub_layer_lerp_speed * delta)
 
 func _start_boss_intro() -> void:
 	_boss_mode = "intro"

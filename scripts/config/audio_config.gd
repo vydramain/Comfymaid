@@ -26,4 +26,5 @@ class_name AudioConfig
 @export var hub_layer2_max_db: float = -10.0
 @export var hub_layer3_min_db: float = -38.0
 @export var hub_layer3_max_db: float = -10.0
+@export var hub_layer_lerp_speed: float = 4.0
 @export var boss_layer_db: float = -6.0

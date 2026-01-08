@@ -1,5 +1,5 @@
 extends Resource
-class_name boss_config
+class_name BossConfig
 
 @export var max_hp: int = 5
 @export var gravity: float = 1400.0
@@ -13,3 +13,8 @@ class_name boss_config
 @export var move_speed: float = 120.0
 @export var acceleration: float = 800.0
 @export var stop_distance: float = 12.0
+@export var walk_anim_speed_threshold: float = 1.0
+@export var smoke_offset_x: float = 12.0
+@export var smoke_push_distance: float = 10.0
+@export var smoke_push_time: float = 0.15
+@export var smoke_follow_time: float = 0.2

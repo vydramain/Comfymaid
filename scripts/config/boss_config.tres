@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="boss_config" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="BossConfig" load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/boss_config.gd" id="1"]
 

@@ -1,5 +1,5 @@
 extends Resource
-class_name player_config
+class_name PlayerConfig
 
 @export var width: float = 16.0
 @export var height: float = 32.0
@@ -18,6 +18,9 @@ class_name player_config
 @export var attack_anim_duration: float = 0.12
 @export var iframe_duration: float = 0.4
 @export var hit_flash_interval: float = 0.08
+@export var hit_stun_duration: float = 0.2
+@export var variable_jump_multiplier: float = 0.5
+@export var run_speed_threshold: float = 5.0
 @export var max_hp: int = 3
 @export var anim_frame_count: int = 4
 @export var anim_duration: float = 0.5

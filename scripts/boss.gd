@@ -1,15 +1,8 @@
 extends CharacterBody2D
 
-@export var config: boss_config
+@export var config: BossConfig
 @export var ai_enabled := true
 
-@export var move_speed := 45.0
-@export var acceleration := 800.0
-@export var stop_distance := 12.0
-@export var smoke_offset_x := 12.0
-@export var smoke_push_distance := 10.0
-@export var smoke_push_time := 0.15
-@export var smoke_follow_time := 0.2
 @export var debug_boss := false
 @export var smoke_scene: PackedScene
 
@@ -19,7 +12,7 @@ var _reviving := false
 var _facing := -1
 var _flicker_id := 0
 var _base_modulate := Color(1, 1, 1)
-var _config: boss_config
+var _config: BossConfig
 
 @onready var damage_area: Area2D = $DamageArea
 @onready var anim_player: AnimationPlayer = $AnimationPlayer
@@ -31,7 +24,7 @@ var _config: boss_config
 @onready var smoke_right: Marker2D = $VisualRoot/SmokeEmitters/SmokeEmitterRight
 
 func _ready() -> void:
-	_config = config if config else boss_config.new()
+	_config = config if config else BossConfig.new()
 	_hp = _config.max_hp
 	if damage_area:
 		damage_area.body_entered.connect(_on_damage_body)
@@ -56,7 +49,7 @@ func _update_ai(delta: float) -> void:
 			_facing = int(dir_x)
 		var target_speed := float(dir_x) * _config.move_speed
 		velocity.x = move_toward(velocity.x, target_speed, _config.acceleration * delta)
-		_update_animation(abs(velocity.x) > 1.0)
+		_update_animation(abs(velocity.x) > _config.walk_anim_speed_threshold)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
 		_update_animation(false)
@@ -205,11 +198,11 @@ func _spawn_smoke(marker: Marker2D) -> void:
 		emitter_parent.add_child(smoke)
 		var spawn_pos := marker.global_position
 		var dir := 1 if spawn_pos.x >= global_position.x else -1
-		spawn_pos.x += smoke_offset_x * dir
+		spawn_pos.x += _config.smoke_offset_x * dir
 		(smoke as Node2D).global_position = spawn_pos
 		if smoke.has_method("set_direction"):
-			smoke.set_direction(dir, smoke_push_distance, smoke_push_time)
+			smoke.set_direction(dir, _config.smoke_push_distance, _config.smoke_push_time)
 		if smoke.has_method("set_follow_root") and root:
-			smoke.set_follow_root(root, smoke_follow_time)
+			smoke.set_follow_root(root, _config.smoke_follow_time)
 	if debug_boss:
 		print("Boss smoke at ", marker.global_position)
