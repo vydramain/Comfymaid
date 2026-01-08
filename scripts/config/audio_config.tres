@@ -1,6 +1,16 @@
-[gd_resource type="Resource" script_class="audio_config" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="AudioConfig" load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/audio_config.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
+hub_layer1_intro_path = "res://assets/music/hub_layer_1_intro.mp3"
+hub_layer1_base_path = "res://assets/music/hub_layer_1_base.mp3"
+hub_layer2_base_path = "res://assets/music/hub_layer_2_base.mp3"
+hub_layer3_base_path = "res://assets/music/hub_layer_3_base.mp3"
+boss_layer1_intro_path = "res://assets/music/bossroom_layer_1_intro.mp3"
+boss_layer2_intro_path = "res://assets/music/bossroom_layer_2_intro.mp3"
+boss_layer1_base_paths = ["res://assets/music/bossroom_layer_1_base_1.mp3", "res://assets/music/bossroom_layer_1_base_2.mp3"]
+boss_layer2_base_paths = ["res://assets/music/bossroom_layer_2_base_1.mp3", "res://assets/music/bossroom_layer_2_base_2.mp3", "res://assets/music/bossroom_layer_2_base_3.mp3"]
+guardian_group = &"Guardian"
+boss_group = &"Boss"

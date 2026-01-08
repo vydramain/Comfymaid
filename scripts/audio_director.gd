@@ -4,24 +4,7 @@ signal boundary_reached(scene_name: StringName)
 
 static var instance: Node
 
-const HUB_LAYER1_INTRO_PATH := "res://assets/music/hub_layer_1_intro.mp3"
-const HUB_LAYER1_BASE_PATH := "res://assets/music/hub_layer_1_base.mp3"
-const HUB_LAYER2_BASE_PATH := "res://assets/music/hub_layer_2_base.mp3"
-const HUB_LAYER3_BASE_PATH := "res://assets/music/hub_layer_3_base.mp3"
-
-const BOSS_LAYER1_INTRO_PATH := "res://assets/music/bossroom_layer_1_intro.mp3"
-const BOSS_LAYER2_INTRO_PATH := "res://assets/music/bossroom_layer_2_intro.mp3"
-const BOSS_LAYER1_BASE_PATHS := [
-	"res://assets/music/bossroom_layer_1_base_1.mp3",
-	"res://assets/music/bossroom_layer_1_base_2.mp3",
-]
-const BOSS_LAYER2_BASE_PATHS := [
-	"res://assets/music/bossroom_layer_2_base_1.mp3",
-	"res://assets/music/bossroom_layer_2_base_2.mp3",
-	"res://assets/music/bossroom_layer_2_base_3.mp3",
-]
-
-@export var config: audio_config
+@export var config: AudioConfig
 
 var hub_layer1: AudioStreamPlayer
 var hub_layer2: AudioStreamPlayer
@@ -45,11 +28,11 @@ var _boundary_id := 0
 
 var _boss_last_layer1_path := ""
 var _boss_last_layer2_path := ""
-var _config: audio_config
+var _config: AudioConfig
 
 func _ready() -> void:
 	instance = self
-	_config = config if config else audio_config.new()
+	_config = config if config else AudioConfig.new()
 	_rng.randomize()
 	_setup_players()
 
@@ -149,13 +132,13 @@ func set_hub_dialogue_suppressed(enabled: bool) -> void:
 
 func _start_hub_intro() -> void:
 	_hub_mode = "intro"
-	hub_layer1.stream = _get_stream(HUB_LAYER1_INTRO_PATH)
+	hub_layer1.stream = _get_stream(_config.hub_layer1_intro_path)
 	hub_layer1.volume_db = _config.hub_layer_base_db
 	hub_layer1.play()
-	hub_layer2.stream = _get_stream(HUB_LAYER2_BASE_PATH)
+	hub_layer2.stream = _get_stream(_config.hub_layer2_base_path)
 	hub_layer2.volume_db = _config.hub_layer_silent_db
 	hub_layer2.stop()
-	hub_layer3.stream = _get_stream(HUB_LAYER3_BASE_PATH)
+	hub_layer3.stream = _get_stream(_config.hub_layer3_base_path)
 	hub_layer3.volume_db = _config.hub_layer_silent_db
 	hub_layer3.stop()
 
@@ -174,20 +157,20 @@ func _on_hub_master_finished() -> void:
 	emit_signal("boundary_reached", _current_scene)
 
 func _restart_hub_layers(keep_volume: bool = false) -> void:
-	hub_layer1.stream = _get_stream(HUB_LAYER1_BASE_PATH if _hub_mode == "base" else HUB_LAYER1_INTRO_PATH)
+	hub_layer1.stream = _get_stream(_config.hub_layer1_base_path if _hub_mode == "base" else _config.hub_layer1_intro_path)
 	if not keep_volume:
 		hub_layer1.volume_db = _config.hub_layer_base_db
 	hub_layer1.play()
-	hub_layer2.stream = _get_stream(HUB_LAYER2_BASE_PATH)
+	hub_layer2.stream = _get_stream(_config.hub_layer2_base_path)
 	hub_layer2.play()
-	hub_layer3.stream = _get_stream(HUB_LAYER3_BASE_PATH)
+	hub_layer3.stream = _get_stream(_config.hub_layer3_base_path)
 	hub_layer3.play()
 
 func _update_hub_layers(delta: float) -> void:
 	if hub_layer2 == null or hub_layer3 == null:
 		return
 	var player := SceneManager.instance.player if SceneManager.instance else null
-	var guardian_node := SceneManager.instance.find_singleton_in_group("Guardian") if SceneManager.instance else null
+	var guardian_node := SceneManager.instance.find_singleton_in_group(_config.guardian_group) if SceneManager.instance else null
 	if player == null or guardian_node == null:
 		return
 	if not (guardian_node is Node2D):
@@ -207,10 +190,10 @@ func _start_boss_intro() -> void:
 	_boss_mode = "intro"
 	_boss_mode_target = "intro"
 	_boss_music_enabled = true
-	_boss_last_layer1_path = BOSS_LAYER1_INTRO_PATH
-	_boss_last_layer2_path = BOSS_LAYER2_INTRO_PATH
-	boss_layer1.stream = _get_stream(BOSS_LAYER1_INTRO_PATH)
-	boss_layer2.stream = _get_stream(BOSS_LAYER2_INTRO_PATH)
+	_boss_last_layer1_path = _config.boss_layer1_intro_path
+	_boss_last_layer2_path = _config.boss_layer2_intro_path
+	boss_layer1.stream = _get_stream(_config.boss_layer1_intro_path)
+	boss_layer2.stream = _get_stream(_config.boss_layer2_intro_path)
 	boss_layer1.volume_db = _config.boss_layer_db
 	boss_layer2.volume_db = _config.boss_layer_db
 	boss_layer1.play()
@@ -234,11 +217,11 @@ func _on_boss_master_finished() -> void:
 
 func _restart_boss_layers(keep_volume: bool = false) -> void:
 	if _boss_mode == "intro":
-		_boss_last_layer1_path = BOSS_LAYER1_INTRO_PATH
-		_boss_last_layer2_path = BOSS_LAYER2_INTRO_PATH
+		_boss_last_layer1_path = _config.boss_layer1_intro_path
+		_boss_last_layer2_path = _config.boss_layer2_intro_path
 	else:
-		_boss_last_layer1_path = _pick_random_excluding(BOSS_LAYER1_BASE_PATHS, _boss_last_layer1_path)
-		_boss_last_layer2_path = _pick_random_excluding(BOSS_LAYER2_BASE_PATHS, _boss_last_layer2_path)
+		_boss_last_layer1_path = _pick_random_excluding(_config.boss_layer1_base_paths, _boss_last_layer1_path)
+		_boss_last_layer2_path = _pick_random_excluding(_config.boss_layer2_base_paths, _boss_last_layer2_path)
 	boss_layer1.stream = _get_stream(_boss_last_layer1_path)
 	boss_layer2.stream = _get_stream(_boss_last_layer2_path)
 	if not keep_volume:
@@ -279,7 +262,7 @@ func _update_boss_visibility() -> void:
 	var camera := player.camera
 	if camera == null:
 		return
-	var boss := SceneManager.instance.find_singleton_in_group("Boss") if SceneManager.instance else null
+	var boss := SceneManager.instance.find_singleton_in_group(_config.boss_group) if SceneManager.instance else null
 	if boss == null:
 		return
 	var view_size: Vector2 = camera.get_viewport_rect().size / camera.zoom
