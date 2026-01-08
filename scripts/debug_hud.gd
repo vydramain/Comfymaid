@@ -24,8 +24,8 @@ func _process(_delta: float) -> void:
 		velocity_label.text = "vel: %.1f, %.1f | grounded: %s" % [player.velocity.x, player.velocity.y, grounded]
 	else:
 		velocity_label.text = "vel: --"
-	if GameDirector.instance:
-		input_label.text = "Input: %s" % GameDirector.instance.get_input_label()
+	if InputRouter.instance:
+		input_label.text = "Input: %s" % InputRouter.instance.get_input_label()
 	else:
 		input_label.text = "Input: --"
 	_update_audio_labels()

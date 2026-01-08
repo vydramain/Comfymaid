@@ -7,8 +7,8 @@ func _ready() -> void:
     add_to_group("prompt_ui")
 
 func show_prompt(text: String, world_position: Vector2) -> void:
-    if GameDirector.instance:
-        label.text = GameDirector.instance.format_prompt_text(text)
+    if InputRouter.instance:
+        label.text = InputRouter.instance.format_prompt_text(text)
     else:
         label.text = text
     var camera := get_viewport().get_camera_2d()
