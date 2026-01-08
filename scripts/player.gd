@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-@export var config: player_config
+@export var config: PlayerConfig
 @export var attack_hitbox_scene: PackedScene
 @export var camera_path: NodePath = NodePath("Camera2D")
 
@@ -13,8 +13,6 @@ enum PlayerState {
 	HIT,
 	DEAD
 }
-
-const HIT_STUN_DURATION := 0.2
 
 var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
@@ -32,7 +30,7 @@ var _bounds_rect := Rect2(Vector2.ZERO, Vector2.ZERO)
 var _bounds_valid := false
 var _bounds_warning_emitted := false
 var _hint_used := false
-var _config: player_config
+var _config: PlayerConfig
 var _reset_hold_timer := 0.0
 var _attack_hitbox: Area2D
 var _hit_stun_timer := 0.0
@@ -48,7 +46,10 @@ var _state_time := 0.0
 @onready var attack_hitbox_timer: Timer = $AttackHitboxTimer
 
 func _ready() -> void:
-	_config = config if config else player_config.new()
+	if config == null:
+		push_error("Player config is missing; falling back to defaults.")
+	_config = config if config else PlayerConfig.new()
+	_validate_config()
 	_set_default_bounds("CameraBounds not found on ready")
 	add_to_group("player")
 	_hp = _config.max_hp
@@ -80,6 +81,38 @@ func _physics_process(delta: float) -> void:
 	_update_visual_flip()
 	_handle_reset(delta)
 
+func _validate_config() -> void:
+	_config.width = max(_config.width, 0.0)
+	_config.height = max(_config.height, 0.0)
+	_config.max_speed = max(_config.max_speed, 0.0)
+	_config.acceleration = max(_config.acceleration, 0.0)
+	_config.deceleration = max(_config.deceleration, 0.0)
+	_config.gravity = max(_config.gravity, 0.0)
+	_config.max_fall_speed = max(_config.max_fall_speed, 0.0)
+	if _config.jump_velocity > 0.0:
+		push_warning("PlayerConfig.jump_velocity should be negative for upward jumps.")
+	if _config.coyote_time <= 0.0:
+		push_warning("PlayerConfig.coyote_time should be > 0.")
+	_config.coyote_time = max(_config.coyote_time, 0.01)
+	if _config.jump_buffer_time <= 0.0:
+		push_warning("PlayerConfig.jump_buffer_time should be > 0.")
+	_config.jump_buffer_time = max(_config.jump_buffer_time, 0.01)
+	_config.attack_cooldown = max(_config.attack_cooldown, 0.0)
+	_config.attack_duration = max(_config.attack_duration, 0.01)
+	_config.attack_lock_time = max(_config.attack_lock_time, 0.0)
+	_config.attack_anim_duration = max(_config.attack_anim_duration, 0.01)
+	_config.iframe_duration = max(_config.iframe_duration, 0.0)
+	_config.hit_flash_interval = max(_config.hit_flash_interval, 0.01)
+	_config.hit_stun_duration = max(_config.hit_stun_duration, 0.0)
+	_config.variable_jump_multiplier = clamp(_config.variable_jump_multiplier, 0.1, 1.0)
+	if _config.run_speed_threshold <= 0.0 or _config.run_speed_threshold > _config.max_speed:
+		push_warning("PlayerConfig.run_speed_threshold out of range; using 10% of max_speed.")
+		_config.run_speed_threshold = max(_config.max_speed * 0.1, 1.0)
+	_config.max_hp = max(_config.max_hp, 1)
+	_config.anim_frame_count = max(_config.anim_frame_count, 1)
+	_config.anim_duration = max(_config.anim_duration, 0.01)
+	_config.reset_hold_time = max(_config.reset_hold_time, 0.0)
+
 func _handle_horizontal(delta: float) -> void:
 	var input_axis := Input.get_axis("move_left", "move_right")
 	if abs(input_axis) > 0.0:
@@ -102,7 +135,7 @@ func _handle_jump() -> void:
 
 func _apply_variable_jump() -> void:
 	if Input.is_action_just_released("jump") and velocity.y < 0.0:
-		velocity.y *= 0.5
+		velocity.y *= _config.variable_jump_multiplier
 
 func _update_jump_timers(delta: float) -> void:
 	if _jump_buffer_timer > 0.0:
@@ -176,7 +209,7 @@ func _try_start_attack() -> void:
 func _resolve_locomotion_state() -> PlayerState:
 	if not is_on_floor():
 		return PlayerState.JUMP if velocity.y < 0.0 else PlayerState.FALL
-	if abs(velocity.x) > 5.0:
+	if abs(velocity.x) > _config.run_speed_threshold:
 		return PlayerState.RUN
 	return PlayerState.IDLE
 
@@ -205,7 +238,7 @@ func _on_enter_state(state: PlayerState) -> void:
 		PlayerState.ATTACK:
 			_play_animation("attack")
 		PlayerState.HIT:
-			_hit_stun_timer = HIT_STUN_DURATION
+			_hit_stun_timer = _config.hit_stun_duration
 		PlayerState.DEAD:
 			_attack_lock_timer = 0.0
 			_attack_anim_timer = 0.0
