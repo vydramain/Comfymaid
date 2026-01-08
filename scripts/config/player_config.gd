@@ -27,9 +27,11 @@ class_name player_config
 @export var camera_deadzone: Vector2 = Vector2(120, 80)
 @export var camera_edge_padding_x: float = 50.0
 @export var camera_edge_padding_y: float = 25.0
+@export var camera_lerp_speed: float = 6.0
 @export var camera_hint_offset: Vector2 = Vector2(0, -120)
 @export var camera_hint_up_time: float = 0.6
 @export var camera_hint_hold: float = 0.4
 @export var camera_hint_down_time: float = 0.6
+@export var camera_bounds_default_size: Vector2 = Vector2(1024, 600)
 
 @export var interact_prompt_offset: Vector2 = Vector2(0, -24)

@@ -28,7 +28,7 @@ var _invuln := false
 var _flicker_id := 0
 var _base_modulate := Color(1, 1, 1)
 
-var _bounds_rect := Rect2(Vector2.ZERO, Vector2(1024, 600))
+var _bounds_rect := Rect2(Vector2.ZERO, Vector2.ZERO)
 var _hint_used := false
 var _config: player_config
 var _reset_hold_timer := 0.0
@@ -47,6 +47,7 @@ var _state_time := 0.0
 
 func _ready() -> void:
 	_config = config if config else player_config.new()
+	_bounds_rect = Rect2(Vector2.ZERO, _config.camera_bounds_default_size)
 	add_to_group("player")
 	_hp = _config.max_hp
 	_base_modulate = visual.modulate
@@ -402,7 +403,7 @@ func _update_camera(delta: float) -> void:
 	target_pos.x = clamp(target_pos.x, min_x, max_x)
 	target_pos.y = clamp(target_pos.y, min_y, max_y)
 
-	camera.global_position = camera.global_position.lerp(target_pos, 6.0 * delta)
+	camera.global_position = camera.global_position.lerp(target_pos, _config.camera_lerp_speed * delta)
 
 func _update_animation(delta: float) -> void:
 	if sprite == null:
