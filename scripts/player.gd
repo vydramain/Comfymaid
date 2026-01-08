@@ -2,6 +2,7 @@ extends CharacterBody2D
 
 @export var config: player_config
 @export var attack_hitbox_scene: PackedScene
+@export var camera_path: NodePath = NodePath("Camera2D")
 
 var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
@@ -23,7 +24,7 @@ var _attack_hitbox: Area2D
 
 @onready var visual: Node2D = $Visual
 @onready var interaction_resolver: Area2D = $InteractionResolver
-@onready var camera: Camera2D = $Camera2D
+@onready var camera: Camera2D = get_node_or_null(camera_path) as Camera2D
 @onready var sprite: AnimatedSprite2D = $Visual/Sprite
 @onready var hint_marker: Marker2D = $HintMarker
 @onready var attack_marker: Marker2D = $AttackMarker
@@ -321,10 +322,7 @@ func _on_level_changed(_scene_name: StringName) -> void:
 	_update_camera_bounds()
 
 func _update_camera_bounds() -> void:
-	var root := SceneManager.instance.current_level if SceneManager.instance else null
-	if root == null:
-		return
-	var bounds := root.get_node_or_null("CameraBounds")
+	var bounds := get_tree().get_first_node_in_group("CameraBounds")
 	if bounds and bounds.has_node("BoundsRect"):
 		var rect_node := bounds.get_node("BoundsRect")
 		if rect_node is ReferenceRect:

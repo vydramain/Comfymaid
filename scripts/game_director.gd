@@ -216,11 +216,9 @@ func notify_boss_revive() -> void:
 		boss_revived_once = true
 		if overlay_ui and overlay_ui.has_method("show_line"):
 			overlay_ui.show_line("Советы по игре будут?")
-		var root := SceneManager.instance.current_level if SceneManager.instance else null
-		if root:
-			var mechanic := root.get_node_or_null("MechanicWord")
-			if mechanic and mechanic.has_method("enable_word"):
-				mechanic.enable_word()
+		var mechanic := get_tree().get_first_node_in_group("MechanicWord")
+		if mechanic and mechanic.has_method("enable_word"):
+			mechanic.enable_word()
 
 func notify_boss_defeated() -> void:
 	boss_defeated = true

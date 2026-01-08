@@ -140,7 +140,7 @@ _data = {
 [sub_resource type="RectangleShape2D" id="2"]
 size = Vector2(110, 120)
 
-[node name="Boss" type="CharacterBody2D"]
+[node name="Boss" type="CharacterBody2D" groups=["Boss"]]
 script = ExtResource("1")
 smoke_scene = ExtResource("4")
 config = ExtResource("5")

@@ -118,7 +118,7 @@ _data = {
 &"playing": SubResource("Animation_playing")
 }
 
-[node name="Guardian" type="Area2D"]
+[node name="Guardian" type="Area2D" groups=["Guardian"]]
 script = ExtResource("1")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

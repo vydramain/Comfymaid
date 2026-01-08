@@ -20,7 +20,7 @@ position = Vector2(18.576355, -39.375015)
 scale = Vector2(14.586804, 10.747023)
 texture = ExtResource("1_5g46w")
 
-[node name="CameraBounds" type="Node2D" parent="."]
+[node name="CameraBounds" type="Node2D" parent="." groups=["CameraBounds"]]
 
 [node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
 offset_left = -1000.0
