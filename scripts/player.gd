@@ -2,7 +2,8 @@ extends CharacterBody2D
 
 @export var config: PlayerConfig
 @export var attack_hitbox_scene: PackedScene
-@export var camera_path: NodePath = NodePath("Camera2D")
+@export var attack_hitbox_path: NodePath
+@export var camera_path: NodePath
 
 enum PlayerState {
 	IDLE,
@@ -39,7 +40,7 @@ var _state_time := 0.0
 
 @onready var visual: Node2D = $Visual
 @onready var interaction_resolver: Area2D = $InteractionResolver
-@onready var camera: Camera2D = get_node_or_null(camera_path) as Camera2D
+@onready var camera: Camera2D = _get_optional_node(camera_path) as Camera2D
 @onready var sprite: AnimatedSprite2D = $Visual/Sprite
 @onready var hint_marker: Marker2D = $HintMarker
 @onready var attack_marker: Marker2D = $AttackMarker
@@ -282,8 +283,8 @@ func _spawn_attack_hitbox() -> void:
 func _setup_attack_hitbox() -> void:
 	if attack_hitbox_scene:
 		_attack_hitbox = attack_hitbox_scene.instantiate()
-	elif has_node("AttackHitbox"):
-		_attack_hitbox = get_node("AttackHitbox")
+	elif attack_hitbox_path != NodePath(""):
+		_attack_hitbox = _get_optional_node(attack_hitbox_path) as Area2D
 	if _attack_hitbox == null:
 		return
 	if _attack_hitbox.get_parent() == null:
@@ -474,15 +475,14 @@ func _on_level_changed(_scene_name: StringName) -> void:
 
 func _update_camera_bounds() -> void:
 	var bounds := SceneManager.instance.find_singleton_in_group("CameraBounds") if SceneManager.instance else null
-	if bounds and bounds.has_node("BoundsRect"):
-		var rect_node := bounds.get_node("BoundsRect")
-		if rect_node is ReferenceRect:
-			var rect := rect_node as ReferenceRect
-			_bounds_rect = rect.get_global_rect()
-			_bounds_valid = _bounds_rect.size.x > 0.0 and _bounds_rect.size.y > 0.0
-			if not _bounds_valid:
-				_set_default_bounds("CameraBounds BoundsRect has invalid size")
-			return
+	var rect_node := SceneManager.instance.find_singleton_in_group("CameraBoundsRect") if SceneManager.instance else null
+	if bounds and rect_node and rect_node is ReferenceRect:
+		var rect := rect_node as ReferenceRect
+		_bounds_rect = rect.get_global_rect()
+		_bounds_valid = _bounds_rect.size.x > 0.0 and _bounds_rect.size.y > 0.0
+		if not _bounds_valid:
+			_set_default_bounds("CameraBounds rect has invalid size")
+		return
 	_set_default_bounds("CameraBounds not found")
 
 func _set_default_bounds(reason: String) -> void:
@@ -495,3 +495,8 @@ func _set_default_bounds(reason: String) -> void:
 		_bounds_warning_emitted = true
 	if OS.has_feature("debug"):
 		assert(_bounds_valid, "Camera bounds invalid: %s" % reason)
+
+func _get_optional_node(node_path: NodePath) -> Node:
+	if node_path == NodePath(""):
+		return null
+	return get_node_or_null(node_path)

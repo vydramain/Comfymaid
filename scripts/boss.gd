@@ -5,14 +5,24 @@ extends CharacterBody2D
 
 @export var debug_boss := false
 @export var smoke_scene: PackedScene
+@export var smoke_pool_size := 4
+
+enum BossState {
+	IDLE,
+	CHASE,
+	REVIVING,
+	DEAD
+}
 
 var _hp := 0
 var _invuln := false
-var _reviving := false
 var _facing := -1
 var _flicker_id := 0
 var _base_modulate := Color(1, 1, 1)
 var _config: BossConfig
+var _state: BossState = BossState.IDLE
+var _state_time := 0.0
+var _smoke_pool: Array[Node2D] = []
 
 @onready var damage_area: Area2D = $DamageArea
 @onready var anim_player: AnimationPlayer = $AnimationPlayer
@@ -29,14 +39,16 @@ func _ready() -> void:
 	_config = config if config else BossConfig.new()
 	_validate_config()
 	_hp = _config.max_hp
+	_setup_smoke_pool()
 	if damage_area:
 		damage_area.body_entered.connect(_on_damage_body)
 	if sprite:
 		_base_modulate = sprite.modulate
-	_play_animation("idle")
+	_set_state(BossState.IDLE)
 
 func _physics_process(delta: float) -> void:
-	_update_ai(delta)
+	_state_time += delta
+	_update_state(delta)
 	_apply_gravity(delta)
 	move_and_slide()
 
@@ -60,22 +72,43 @@ func _validate_config() -> void:
 	_config.smoke_push_time = max(_config.smoke_push_time, 0.01)
 	_config.smoke_follow_time = max(_config.smoke_follow_time, 0.01)
 
-func _update_ai(delta: float) -> void:
-	var can_move := ai_enabled and not _reviving and not _is_defeated()
+func _update_state(delta: float) -> void:
+	match _state:
+		BossState.DEAD:
+			velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
+			_update_animation(false)
+		BossState.REVIVING:
+			velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
+			_update_animation(false)
+		BossState.IDLE:
+			if _can_chase():
+				_set_state(BossState.CHASE)
+				return
+			velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
+			_update_animation(false)
+		BossState.CHASE:
+			if not _can_chase():
+				_set_state(BossState.IDLE)
+				return
+			_update_chase(delta)
+
+func _update_chase(delta: float) -> void:
 	var player := SceneManager.instance.player if SceneManager.instance else null
-	if can_move and player:
-		var to_player := player.global_position - global_position
-		var dir_x: float = sign(to_player.x)
-		if abs(to_player.x) <= _config.stop_distance:
-			dir_x = 0.0
-		if dir_x != 0.0:
-			_facing = int(dir_x)
-		var target_speed := float(dir_x) * _config.move_speed
-		velocity.x = move_toward(velocity.x, target_speed, _config.acceleration * delta)
-		_update_animation(abs(velocity.x) > _config.walk_anim_speed_threshold)
-	else:
-		velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
-		_update_animation(false)
+	if player == null:
+		_set_state(BossState.IDLE)
+		return
+	var to_player := player.global_position - global_position
+	var dir_x: float = sign(to_player.x)
+	if abs(to_player.x) <= _config.stop_distance:
+		dir_x = 0.0
+	if dir_x != 0.0:
+		_facing = int(dir_x)
+	var target_speed := float(dir_x) * _config.move_speed
+	velocity.x = move_toward(velocity.x, target_speed, _config.acceleration * delta)
+	_update_animation(abs(velocity.x) > _config.walk_anim_speed_threshold)
+
+func _can_chase() -> bool:
+	return ai_enabled and _state != BossState.REVIVING and not _is_defeated()
 
 func _apply_gravity(delta: float) -> void:
 	velocity.y += _config.gravity * delta
@@ -104,10 +137,10 @@ func _update_facing_visual() -> void:
 	sprite.scale.x = 1 if _facing >= 0 else -1
 
 func _is_defeated() -> bool:
-	return GameDirector.instance != null and GameDirector.instance.boss_defeated
+	return _state == BossState.DEAD or (GameDirector.instance != null and GameDirector.instance.boss_defeated)
 
 func take_hit(amount: int) -> void:
-	if _invuln or _reviving:
+	if _invuln or _state == BossState.REVIVING or _state == BossState.DEAD:
 		return
 	_hp = max(_hp - amount, 0)
 	if _hp <= 0:
@@ -125,7 +158,7 @@ func _handle_death() -> void:
 		_invalid_death()
 
 func _invalid_death() -> void:
-	_reviving = true
+	_set_state(BossState.REVIVING)
 	_invuln = true
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector2(0.7, 0.7), _config.invalid_death_shrink_time)
@@ -133,7 +166,6 @@ func _invalid_death() -> void:
 	await tween.finished
 	_hp = _config.max_hp
 	scale = Vector2.ONE
-	_reviving = false
 	_invuln = false
 	_stop_flicker()
 	if sprite:
@@ -141,9 +173,10 @@ func _invalid_death() -> void:
 	GameDirector.instance.notify_boss_revive()
 	_enable_mechanic_word()
 	_trigger_camera_hint()
+	_set_state(BossState.IDLE)
 
 func _final_death() -> void:
-	_reviving = true
+	_set_state(BossState.DEAD)
 	_invuln = true
 	_stop_flicker()
 	var tween := create_tween()
@@ -212,9 +245,9 @@ func spawn_smoke_right() -> void:
 func _spawn_smoke(marker: Marker2D) -> void:
 	if smoke_scene == null or marker == null:
 		return
-	if not ai_enabled or _reviving or _is_defeated():
+	if not ai_enabled or _state == BossState.REVIVING or _is_defeated():
 		return
-	var smoke := smoke_scene.instantiate()
+	var smoke := _checkout_smoke()
 	var root := SceneManager.instance.current_level if SceneManager.instance else get_parent()
 	var emitter_parent := marker
 	if emitter_parent and smoke is Node2D:
@@ -223,9 +256,60 @@ func _spawn_smoke(marker: Marker2D) -> void:
 		var dir := 1 if spawn_pos.x >= global_position.x else -1
 		spawn_pos.x += _config.smoke_offset_x * dir
 		(smoke as Node2D).global_position = spawn_pos
+		if smoke.has_method("activate_from_pool"):
+			smoke.activate_from_pool()
 		if smoke.has_method("set_direction"):
 			smoke.set_direction(dir, _config.smoke_push_distance, _config.smoke_push_time)
 		if smoke.has_method("set_follow_root") and root:
 			smoke.set_follow_root(root, _config.smoke_follow_time)
 	if debug_boss:
 		print("Boss smoke at ", marker.global_position)
+
+func _set_state(next_state: BossState) -> void:
+	if _state == next_state:
+		return
+	_state = next_state
+	_state_time = 0.0
+	_on_enter_state(_state)
+
+func _on_enter_state(state: BossState) -> void:
+	match state:
+		BossState.DEAD, BossState.REVIVING, BossState.IDLE:
+			_play_animation("idle")
+		BossState.CHASE:
+			_play_animation("walk")
+
+func _setup_smoke_pool() -> void:
+	if smoke_scene == null or smoke_pool_size <= 0:
+		return
+	for index in range(smoke_pool_size):
+		var smoke := smoke_scene.instantiate()
+		_register_smoke(smoke)
+		_reclaim_smoke(smoke)
+
+func _register_smoke(smoke: Node) -> void:
+	if smoke.has_method("set_pooling_enabled"):
+		smoke.set_pooling_enabled(true)
+	if smoke.has_signal("returned_to_pool") and not smoke.returned_to_pool.is_connected(_on_smoke_returned):
+		smoke.returned_to_pool.connect(_on_smoke_returned)
+
+func _checkout_smoke() -> Node2D:
+	if _smoke_pool.is_empty():
+		var smoke := smoke_scene.instantiate()
+		_register_smoke(smoke)
+		return smoke
+	return _smoke_pool.pop_back()
+
+func _reclaim_smoke(smoke: Node) -> void:
+	if smoke is Node2D:
+		var smoke_node := smoke as Node2D
+		if smoke_node.has_method("deactivate_to_pool"):
+			smoke_node.deactivate_to_pool()
+		if smoke_node.get_parent():
+			smoke_node.get_parent().remove_child(smoke_node)
+		add_child(smoke_node)
+		smoke_node.visible = false
+		_smoke_pool.append(smoke_node)
+
+func _on_smoke_returned(smoke: Node2D) -> void:
+	_reclaim_smoke(smoke)
