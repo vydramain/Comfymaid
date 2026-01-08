@@ -14,16 +14,13 @@ var _invuln := false
 var _flicker_id := 0
 var _base_modulate := Color(1, 1, 1)
 
-var _interactables: Array[Area2D] = []
-var _nearest: Area2D
-
 var _bounds_rect := Rect2(Vector2.ZERO, Vector2(1024, 600))
 var _hint_used := false
 var _config: player_config
 var _reset_hold_timer := 0.0
 
 @onready var visual: Node2D = $Visual
-@onready var interaction_detector: Area2D = $InteractionDetector
+@onready var interaction_resolver: Area2D = $InteractionResolver
 @onready var camera: Camera2D = $Camera2D
 @onready var sprite: AnimatedSprite2D = $Visual/Sprite
 @onready var hint_marker: Marker2D = $HintMarker
@@ -33,15 +30,13 @@ func _ready() -> void:
 	add_to_group("player")
 	_hp = _config.max_hp
 	_base_modulate = visual.modulate
-	if interaction_detector:
-		interaction_detector.area_entered.connect(_on_area_entered)
-		interaction_detector.area_exited.connect(_on_area_exited)
+	if interaction_resolver:
+		interaction_resolver.set("prompt_offset", _config.interact_prompt_offset)
 	if SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
 	_update_camera_bounds()
 
 func _process(delta: float) -> void:
-	_update_interaction_prompt()
 	_update_camera(delta)
 	_update_animation(delta)
 
@@ -222,55 +217,8 @@ func reset_state() -> void:
 	_invuln = false
 
 func try_interact() -> void:
-	if _nearest and _nearest.has_method("interact"):
-		_nearest.interact(self)
-
-func _on_area_entered(area: Area2D) -> void:
-	if area.is_in_group("interactable"):
-		_interactables.append(area)
-
-func _on_area_exited(area: Area2D) -> void:
-	_interactables.erase(area)
-
-func _find_nearest() -> Area2D:
-	var nearest: Area2D = null
-	var best_dist := INF
-	for item in _interactables:
-		if item == null or not is_instance_valid(item):
-			continue
-		if item.has_method("is_enabled") and not item.is_enabled():
-			continue
-		var dist := global_position.distance_to(item.global_position)
-		if dist < best_dist:
-			best_dist = dist
-			nearest = item
-	return nearest
-
-func _update_interaction_prompt() -> void:
-	if GameDirector.instance and GameDirector.instance.dialogue_ui and GameDirector.instance.dialogue_ui.is_active():
-		_clear_prompt()
-		return
-	_nearest = _find_nearest()
-	if _nearest:
-		_show_prompt(_nearest)
-	else:
-		_clear_prompt()
-
-func _show_prompt(interactable: Area2D) -> void:
-	if GameDirector.instance == null or GameDirector.instance.prompt_ui == null:
-		return
-	var text := "△ Interact"
-	if interactable.has_method("get_prompt_text"):
-		text = interactable.get_prompt_text()
-	var prompt_pos := global_position
-	if hint_marker:
-		prompt_pos = hint_marker.global_position
-	GameDirector.instance.prompt_ui.show_prompt(text, prompt_pos + _config.interact_prompt_offset)
-
-func _clear_prompt() -> void:
-	if GameDirector.instance == null or GameDirector.instance.prompt_ui == null:
-		return
-	GameDirector.instance.prompt_ui.hide_prompt()
+	if interaction_resolver and interaction_resolver.has_method("try_interact"):
+		interaction_resolver.try_interact()
 
 func _update_camera(delta: float) -> void:
 	if camera == null:
