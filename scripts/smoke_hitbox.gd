@@ -1,5 +1,7 @@
 extends Node2D
 
+signal returned_to_pool(hitbox: Node2D)
+
 @export var life_time := 1.0
 @export var appear_time := 0.2
 @export var disappear_time := 0.2
@@ -21,6 +23,11 @@ var _dir := 1
 var _material: ShaderMaterial
 var _follow_root: Node
 var _follow_until := 0.0
+var _use_pool := false
+var _reveal_tween: Tween
+var _push_tween: Tween
+var _active := true
+var _returned := false
 
 @onready var sprite: Sprite2D = $Sprite
 @onready var hurt_area: Area2D = $HurtArea
@@ -42,13 +49,50 @@ func _ready() -> void:
 	_start_reveal()
 
 func _process(delta: float) -> void:
+	if not _active:
+		return
 	_elapsed += delta
 	if _follow_root and _elapsed >= _follow_until:
 		_detach_to_root()
 	if hurt_area:
 		hurt_area.monitoring = _elapsed >= hitbox_start and _elapsed <= hitbox_end
 	if _elapsed >= life_time:
-		queue_free()
+		_complete_lifecycle()
+
+func set_pooling_enabled(enabled: bool) -> void:
+	_use_pool = enabled
+
+func activate_from_pool() -> void:
+	_elapsed = 0.0
+	_follow_root = null
+	_follow_until = 0.0
+	_active = true
+	_returned = false
+	visible = true
+	set_process(true)
+	if hurt_area:
+		hurt_area.monitoring = false
+	if _reveal_tween:
+		_reveal_tween.kill()
+	if _push_tween:
+		_push_tween.kill()
+	if _material:
+		_material.set_shader_parameter("reveal", 0.0)
+	_start_reveal()
+
+func deactivate_to_pool() -> void:
+	_active = false
+	set_process(false)
+	visible = false
+	_follow_root = null
+	_follow_until = 0.0
+	_returned = true
+	if hurt_area:
+		hurt_area.monitoring = false
+	if _reveal_tween:
+		_reveal_tween.kill()
+	if _push_tween:
+		_push_tween.kill()
 
 func set_direction(direction: int, push_distance: float, push_time: float) -> void:
 	_dir = 1 if direction >= 0 else -1
@@ -71,17 +115,21 @@ func _start_reveal() -> void:
 	if _material == null:
 		return
 	_material.set_shader_parameter("reveal", 0.0)
-	var tween := create_tween()
-	tween.tween_property(_material, "shader_parameter/reveal", 1.0, appear_time)
-	tween.tween_interval(max(life_time - appear_time - disappear_time, 0.0))
-	tween.tween_property(_material, "shader_parameter/reveal", 0.0, disappear_time)
+	if _reveal_tween:
+		_reveal_tween.kill()
+	_reveal_tween = create_tween()
+	_reveal_tween.tween_property(_material, "shader_parameter/reveal", 1.0, appear_time)
+	_reveal_tween.tween_interval(max(life_time - appear_time - disappear_time, 0.0))
+	_reveal_tween.tween_property(_material, "shader_parameter/reveal", 0.0, disappear_time)
 	if sprite:
 		sprite.scale = Vector2.ONE * appear_scale_from * visual_scale
-		tween.tween_property(sprite, "scale", Vector2.ONE * appear_scale_to * visual_scale, appear_time)
+		_reveal_tween.tween_property(sprite, "scale", Vector2.ONE * appear_scale_to * visual_scale, appear_time)
 
 func _start_push() -> void:
-	var tween := create_tween()
-	tween.tween_property(self, "position", position + Vector2(initial_push_distance * _dir, -push_up), initial_push_time)
+	if _push_tween:
+		_push_tween.kill()
+	_push_tween = create_tween()
+	_push_tween.tween_property(self, "position", position + Vector2(initial_push_distance * _dir, -push_up), initial_push_time)
 
 func _detach_to_root() -> void:
 	if _follow_root == null or not is_instance_valid(_follow_root):
@@ -123,3 +171,13 @@ func _on_body_entered(body: Node) -> void:
 func _on_area_entered(area: Area2D) -> void:
 	if area and area.get_parent() and area.get_parent().is_in_group("player"):
 		area.get_parent().take_hit(damage)
+
+func _complete_lifecycle() -> void:
+	if _returned:
+		return
+	if _use_pool:
+		_returned = true
+		deactivate_to_pool()
+		returned_to_pool.emit(self)
+	else:
+		queue_free()

@@ -48,7 +48,7 @@ texture = ExtResource("2_7f5op")
 
 [node name="CameraBounds" type="Node2D" parent="." groups=["CameraBounds"]]
 
-[node name="BoundsRect" type="ReferenceRect" parent="CameraBounds"]
+[node name="BoundsRect" type="ReferenceRect" parent="CameraBounds" groups=["CameraBoundsRect"]]
 offset_left = -950.0
 offset_top = -260.0
 offset_right = 950.0

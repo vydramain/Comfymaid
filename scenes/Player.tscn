@@ -15,6 +15,7 @@ height = 56.0
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1")
 config = ExtResource("3")
+camera_path = NodePath("Camera2D")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 3)
