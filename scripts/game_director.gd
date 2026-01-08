@@ -8,6 +8,7 @@ const WHITEOUT_FADE_MAX := 3.0
 @export var game_state: GameState = GameState.new()
 
 var _scene_manager_connected := false
+var _ui_controller_connected := false
 
 var mechanic_broken: bool:
 	get:
@@ -62,6 +63,7 @@ func _ready() -> void:
 	if SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
 		_scene_manager_connected = true
+	_bind_ui_controller()
 
 func _exit_tree() -> void:
 	if instance == self:
@@ -73,6 +75,38 @@ func _process(_delta: float) -> void:
 		_scene_manager_connected = true
 		if AudioDirector.instance and SceneManager.instance.current_scene_name != "":
 			AudioDirector.instance.start_scene_audio(SceneManager.instance.current_scene_name)
+	_bind_ui_controller()
+
+func _bind_ui_controller() -> void:
+	if _ui_controller_connected:
+		return
+	if UIController.instance == null:
+		return
+	UIController.instance.dialogue_started.connect(_on_dialogue_started)
+	UIController.instance.dialogue_finished.connect(_on_dialogue_finished)
+	_ui_controller_connected = true
+
+func _on_dialogue_started() -> void:
+	var player := _get_player()
+	if player and player.has_method("set_movement_enabled"):
+		player.set_movement_enabled(false)
+	if SceneManager.instance and SceneManager.instance.current_scene_name == "Hub":
+		state = GameState.Phase.HUB_DIALOGUE
+	else:
+		state = GameState.Phase.BOSS_FIGHT
+	if AudioDirector.instance:
+		AudioDirector.instance.set_hub_dialogue_suppressed(true)
+
+func _on_dialogue_finished() -> void:
+	var player := _get_player()
+	if player and player.has_method("set_movement_enabled"):
+		player.set_movement_enabled(true)
+	if SceneManager.instance and SceneManager.instance.current_scene_name == "Hub":
+		state = GameState.Phase.HUB_FREE
+	else:
+		state = GameState.Phase.BOSSROOM_FREE
+	if AudioDirector.instance:
+		AudioDirector.instance.set_hub_dialogue_suppressed(false)
 
 func _get_player() -> Node:
 	if SceneManager.instance:

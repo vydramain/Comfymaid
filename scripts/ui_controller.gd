@@ -2,6 +2,9 @@ extends Node
 
 static var instance: Node
 
+signal dialogue_started
+signal dialogue_finished
+
 var dialogue_ui: Node
 var prompt_ui: Node
 var overlay_ui: Node
@@ -14,6 +17,7 @@ var _ui_manager_connected := false
 
 func _ready() -> void:
 	instance = self
+	set_process(true)
 	_bind_ui_manager()
 	get_tree().node_added.connect(_on_node_added)
 
@@ -37,6 +41,9 @@ func _get_ui_manager() -> Node:
 func _on_node_added(node: Node) -> void:
 	if node.is_in_group("ui_manager"):
 		_bind_ui_manager()
+
+func _process(_delta: float) -> void:
+	_cleanup_invalid_ui()
 
 func _on_ui_ready(next_dialogue: Node, next_prompt: Node, next_overlay: Node, next_whiteout: Node) -> void:
 	var dialogue_changed := next_dialogue != dialogue_ui
@@ -70,33 +77,25 @@ func _disconnect_dialogue() -> void:
 	_dialogue_source = null
 
 func _on_dialogue_started() -> void:
-	var player := _get_player()
-	if player and player.has_method("set_movement_enabled"):
-		player.set_movement_enabled(false)
-	if GameDirector.instance:
-		if SceneManager.instance and SceneManager.instance.current_scene_name == "Hub":
-			GameDirector.instance.state = GameState.Phase.HUB_DIALOGUE
-		else:
-			GameDirector.instance.state = GameState.Phase.BOSS_FIGHT
-	if AudioDirector.instance:
-		AudioDirector.instance.set_hub_dialogue_suppressed(true)
+	dialogue_started.emit()
 
 func _on_dialogue_finished() -> void:
-	var player := _get_player()
-	if player and player.has_method("set_movement_enabled"):
-		player.set_movement_enabled(true)
-	if GameDirector.instance:
-		if SceneManager.instance and SceneManager.instance.current_scene_name == "Hub":
-			GameDirector.instance.state = GameState.Phase.HUB_FREE
-		else:
-			GameDirector.instance.state = GameState.Phase.BOSSROOM_FREE
-	if AudioDirector.instance:
-		AudioDirector.instance.set_hub_dialogue_suppressed(false)
+	dialogue_finished.emit()
 
-func _get_player() -> Node:
-	if SceneManager.instance:
-		return SceneManager.instance.player
-	return null
+func _cleanup_invalid_ui() -> void:
+	var invalid_dialogue := dialogue_ui != null and not is_instance_valid(dialogue_ui)
+	var invalid_prompt := prompt_ui != null and not is_instance_valid(prompt_ui)
+	var invalid_overlay := overlay_ui != null and not is_instance_valid(overlay_ui)
+	var invalid_whiteout := whiteout_ui != null and not is_instance_valid(whiteout_ui)
+	if invalid_dialogue:
+		_disconnect_dialogue()
+		dialogue_ui = null
+	if invalid_prompt:
+		prompt_ui = null
+	if invalid_overlay:
+		overlay_ui = null
+	if invalid_whiteout:
+		whiteout_ui = null
 
 func is_dialogue_active() -> bool:
 	return dialogue_ui != null and dialogue_ui.has_method("is_active") and dialogue_ui.is_active()
