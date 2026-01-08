@@ -160,7 +160,7 @@ func request_scene_change(scene_name: StringName, spawn_marker: StringName = "Pl
 
 func _do_scene_change(scene_name: StringName, spawn_marker: StringName) -> void:
 	if SceneManager.instance:
-		SceneManager.instance.change_scene(scene_name, spawn_marker)
+		SceneManager.instance.load_level(scene_name, spawn_marker)
 
 func request_reset() -> void:
 	world_reset_count += 1

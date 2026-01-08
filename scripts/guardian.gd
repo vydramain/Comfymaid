@@ -1,9 +1,7 @@
-extends Area2D
+extends "res://scripts/interactable.gd"
 
 const GUARDIAN_DIALOGUE_SUPPRESS_COLOR := Color(0.6, 0.6, 0.6)
 const GUARDIAN_IDLE_COLOR := Color(0.9, 0.9, 0.6)
-@export var prompt_text := "{INTERACT} Talk"
-@export var enabled := true
 @export var pre_boss_lines: Array[String] = [
 	"Ты здесь?",
 	"Пусто, но звучит знакомо.",
@@ -30,15 +28,12 @@ var _extra_index := 0
 @onready var anim_player: AnimationPlayer = $AnimationPlayer
 
 func _ready() -> void:
-	add_to_group("interactable")
+	super._ready()
 	_play_animation("playing")
 
 func _process(_delta: float) -> void:
 	_update_prompt()
 	_update_visual_state()
-
-func is_enabled() -> bool:
-	return enabled
 
 func get_prompt_text() -> String:
 	return prompt_text

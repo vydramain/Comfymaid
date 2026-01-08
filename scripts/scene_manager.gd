@@ -56,9 +56,6 @@ func load_level(scene_name: StringName, spawn_marker: StringName = "PlayerSpawn"
 	_place_player(spawn_marker)
 	emit_signal("level_changed", current_scene_name)
 
-func change_scene(scene_name: StringName, spawn_marker: StringName = "PlayerSpawn") -> void:
-	load_level(scene_name, spawn_marker)
-
 func _ensure_player_instance() -> void:
 	if player and is_instance_valid(player):
 		if player.get_parent():
