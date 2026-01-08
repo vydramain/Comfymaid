@@ -31,7 +31,7 @@ func _ready() -> void:
 	_hp = _config.max_hp
 	_base_modulate = visual.modulate
 	if interaction_resolver:
-		interaction_resolver.set("prompt_offset", _config.interact_prompt_offset)
+		interaction_resolver.prompt_offset = _config.interact_prompt_offset
 	if SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
 	_update_camera_bounds()
