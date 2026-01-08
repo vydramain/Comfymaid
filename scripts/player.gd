@@ -59,6 +59,8 @@ func _ready() -> void:
 		interaction_resolver.prompt_offset = _config.interact_prompt_offset
 	if SceneManager.instance:
 		SceneManager.instance.level_changed.connect(_on_level_changed)
+	if camera_path != NodePath("") and camera == null:
+		push_warning("Player camera_path set but node not found: %s" % camera_path)
 	_setup_attack_hitbox()
 	_setup_attack_hitbox_timer()
 	_update_camera_bounds()
@@ -285,6 +287,8 @@ func _setup_attack_hitbox() -> void:
 		_attack_hitbox = attack_hitbox_scene.instantiate()
 	elif attack_hitbox_path != NodePath(""):
 		_attack_hitbox = _get_optional_node(attack_hitbox_path) as Area2D
+		if _attack_hitbox == null:
+			push_warning("Player attack_hitbox_path set but node not found: %s" % attack_hitbox_path)
 	if _attack_hitbox == null:
 		return
 	if _attack_hitbox.get_parent() == null:
@@ -474,9 +478,8 @@ func _on_level_changed(_scene_name: StringName) -> void:
 	_update_camera_bounds()
 
 func _update_camera_bounds() -> void:
-	var bounds := SceneManager.instance.find_singleton_in_group("CameraBounds") if SceneManager.instance else null
-	var rect_node := SceneManager.instance.find_singleton_in_group("CameraBoundsRect") if SceneManager.instance else null
-	if bounds and rect_node and rect_node is ReferenceRect:
+	var rect_node := _find_singleton_in_level_group(&"CameraBoundsRect")
+	if rect_node and rect_node is ReferenceRect:
 		var rect := rect_node as ReferenceRect
 		_bounds_rect = rect.get_global_rect()
 		_bounds_valid = _bounds_rect.size.x > 0.0 and _bounds_rect.size.y > 0.0
@@ -500,3 +503,19 @@ func _get_optional_node(node_path: NodePath) -> Node:
 	if node_path == NodePath(""):
 		return null
 	return get_node_or_null(node_path)
+
+func _find_singleton_in_level_group(group_name: StringName) -> Node:
+	if SceneManager.instance == null:
+		return null
+	var nodes: Array[Node] = []
+	for node in get_tree().get_nodes_in_group(group_name):
+		if node == null or not node.is_inside_tree():
+			continue
+		if SceneManager.instance.current_level and not SceneManager.instance.current_level.is_ancestor_of(node):
+			continue
+		nodes.append(node)
+	if nodes.size() == 1:
+		return nodes[0]
+	if nodes.size() > 1:
+		push_warning("Group '%s' has %d nodes in current level; using default camera bounds." % [group_name, nodes.size()])
+	return null

@@ -6,10 +6,12 @@ extends CharacterBody2D
 @export var debug_boss := false
 @export var smoke_scene: PackedScene
 @export var smoke_pool_size := 4
+@export var hit_stun_time := 0.15
 
 enum BossState {
 	IDLE,
 	CHASE,
+	HIT,
 	REVIVING,
 	DEAD
 }
@@ -23,6 +25,8 @@ var _config: BossConfig
 var _state: BossState = BossState.IDLE
 var _state_time := 0.0
 var _smoke_pool: Array[Node2D] = []
+var _smoke_nodes: Array[Node] = []
+var _hit_stun_timer := 0.0
 
 @onready var damage_area: Area2D = $DamageArea
 @onready var anim_player: AnimationPlayer = $AnimationPlayer
@@ -45,6 +49,12 @@ func _ready() -> void:
 	if sprite:
 		_base_modulate = sprite.modulate
 	_set_state(BossState.IDLE)
+
+func _exit_tree() -> void:
+	for smoke in _smoke_nodes:
+		if smoke and is_instance_valid(smoke) and smoke.has_signal("returned_to_pool"):
+			if smoke.returned_to_pool.is_connected(_on_smoke_returned):
+				smoke.returned_to_pool.disconnect(_on_smoke_returned)
 
 func _physics_process(delta: float) -> void:
 	_state_time += delta
@@ -77,18 +87,24 @@ func _update_state(delta: float) -> void:
 		BossState.DEAD:
 			velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
 			_update_animation(false)
+		BossState.HIT:
+			_hit_stun_timer = max(_hit_stun_timer - delta, 0.0)
+			velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
+			_update_animation(false)
+			if _hit_stun_timer == 0.0:
+				_force_state(_resolve_base_state())
 		BossState.REVIVING:
 			velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
 			_update_animation(false)
 		BossState.IDLE:
 			if _can_chase():
-				_set_state(BossState.CHASE)
+				_request_state(BossState.CHASE)
 				return
 			velocity.x = move_toward(velocity.x, 0.0, _config.acceleration * delta)
 			_update_animation(false)
 		BossState.CHASE:
 			if not _can_chase():
-				_set_state(BossState.IDLE)
+				_request_state(BossState.IDLE)
 				return
 			_update_chase(delta)
 
@@ -108,7 +124,13 @@ func _update_chase(delta: float) -> void:
 	_update_animation(abs(velocity.x) > _config.walk_anim_speed_threshold)
 
 func _can_chase() -> bool:
-	return ai_enabled and _state != BossState.REVIVING and not _is_defeated()
+	return ai_enabled and not _is_defeated() and _state != BossState.REVIVING and _state != BossState.HIT
+
+func _resolve_base_state() -> BossState:
+	return BossState.CHASE if _can_chase_base() else BossState.IDLE
+
+func _can_chase_base() -> bool:
+	return ai_enabled and not _is_defeated()
 
 func _apply_gravity(delta: float) -> void:
 	velocity.y += _config.gravity * delta
@@ -148,6 +170,7 @@ func take_hit(amount: int) -> void:
 		_handle_death()
 	else:
 		_start_invuln()
+		_request_state(BossState.HIT)
 
 func _handle_death() -> void:
 	if GameDirector.instance == null:
@@ -158,7 +181,7 @@ func _handle_death() -> void:
 		_invalid_death()
 
 func _invalid_death() -> void:
-	_set_state(BossState.REVIVING)
+	_force_state(BossState.REVIVING)
 	_invuln = true
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector2(0.7, 0.7), _config.invalid_death_shrink_time)
@@ -173,10 +196,10 @@ func _invalid_death() -> void:
 	GameDirector.instance.notify_boss_revive()
 	_enable_mechanic_word()
 	_trigger_camera_hint()
-	_set_state(BossState.IDLE)
+	_force_state(BossState.IDLE)
 
 func _final_death() -> void:
-	_set_state(BossState.DEAD)
+	_force_state(BossState.DEAD)
 	_invuln = true
 	_stop_flicker()
 	var tween := create_tween()
@@ -272,9 +295,31 @@ func _set_state(next_state: BossState) -> void:
 	_state_time = 0.0
 	_on_enter_state(_state)
 
+func _request_state(next_state: BossState) -> void:
+	if not _can_transition_to(next_state):
+		return
+	_set_state(next_state)
+
+func _force_state(next_state: BossState) -> void:
+	_set_state(next_state)
+
+func _can_transition_to(next_state: BossState) -> bool:
+	if _state == BossState.DEAD:
+		return false
+	if next_state == BossState.DEAD or next_state == BossState.REVIVING:
+		return true
+	if _state == BossState.REVIVING:
+		return false
+	if _state == BossState.HIT and next_state != BossState.DEAD and next_state != BossState.REVIVING:
+		return false
+	return true
+
 func _on_enter_state(state: BossState) -> void:
 	match state:
 		BossState.DEAD, BossState.REVIVING, BossState.IDLE:
+			_play_animation("idle")
+		BossState.HIT:
+			_hit_stun_timer = max(hit_stun_time, 0.0)
 			_play_animation("idle")
 		BossState.CHASE:
 			_play_animation("walk")
@@ -288,6 +333,7 @@ func _setup_smoke_pool() -> void:
 		_reclaim_smoke(smoke)
 
 func _register_smoke(smoke: Node) -> void:
+	_smoke_nodes.append(smoke)
 	if smoke.has_method("set_pooling_enabled"):
 		smoke.set_pooling_enabled(true)
 	if smoke.has_signal("returned_to_pool") and not smoke.returned_to_pool.is_connected(_on_smoke_returned):
